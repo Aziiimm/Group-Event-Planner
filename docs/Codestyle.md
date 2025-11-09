@@ -2,7 +2,9 @@
 
 ## Prettier
 
-- Runs formatter on save
+- VSCode Extension
+- Change Settings to run formatter on save
+- Prettier config files have already been setup in the repo
 
 ## NativeWind class sorting
 
@@ -19,7 +21,7 @@
 - Hooks + Utilities: `camelCase.ts`
 - Folders: `example`
 
-## Commit Messages
+## Commit Messagesdocs
 
 - Use meanigful commit messages prefixed like `feat:`, `bug-fix:`, `test:`, ...
   - ex: `feat: add event list screen`, `fix: corrected /health response format`
