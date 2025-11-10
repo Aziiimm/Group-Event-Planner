@@ -41,6 +41,8 @@ lerna-debug.log*
 .env.test.local
 .env.production.local
 .env.local
+# but allow .env.example to be tracked
+!.env.example
 
 # temp directory
 .temp

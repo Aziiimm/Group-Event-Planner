@@ -1,14 +1,27 @@
 import React from 'react';
 
+import { Redirect } from 'expo-router';
 import { Tabs } from 'expo-router';
 
 import { HapticTab } from '@/components/haptic-tab';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
+import { useAuth } from '@/hooks/use-auth';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
+  const { user, loading } = useAuth();
+
+  // Show nothing while checking auth state
+  if (loading) {
+    return null;
+  }
+
+  // Redirect to login if not authenticated
+  if (!user) {
+    return <Redirect href="/(auth)/login" />;
+  }
 
   return (
     <Tabs
@@ -26,10 +39,10 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="explore"
+        name="settings"
         options={{
-          title: 'Explore',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
+          title: 'Settings',
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="gearshape.fill" color={color} />,
         }}
       />
     </Tabs>
