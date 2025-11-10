@@ -49,21 +49,21 @@ export default function SignupScreen() {
   };
 
   return (
-    <View className="flex-1 justify-center bg-white px-6 dark:bg-gray-900">
+    <View className="flex-1 justify-center bg-white px-6">
       <View className="mb-8">
-        <Text className="mb-2 text-3xl font-bold text-gray-900 dark:text-white">
+        <Text className="mb-2 text-3xl font-bold text-gray-900">
           Create Account
         </Text>
-        <Text className="text-gray-600 dark:text-gray-400">Sign up to get started</Text>
+        <Text className="text-gray-600">Sign up to get started</Text>
       </View>
 
       <View className="space-y-4">
         <View>
-          <Text className="mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+          <Text className="mb-2 text-sm font-medium text-gray-700">
             First Name
           </Text>
           <TextInput
-            className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+            className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900"
             placeholder="Enter your first name"
             placeholderTextColor="#9CA3AF"
             value={firstName}
@@ -74,11 +74,11 @@ export default function SignupScreen() {
         </View>
 
         <View>
-          <Text className="mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+          <Text className="mb-2 text-sm font-medium text-gray-700">
             Last Name
           </Text>
           <TextInput
-            className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+            className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900"
             placeholder="Enter your last name"
             placeholderTextColor="#9CA3AF"
             value={lastName}
@@ -89,11 +89,11 @@ export default function SignupScreen() {
         </View>
 
         <View>
-          <Text className="mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+          <Text className="mb-2 text-sm font-medium text-gray-700">
             Display Name
           </Text>
           <TextInput
-            className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+            className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900"
             placeholder="Enter your display name"
             placeholderTextColor="#9CA3AF"
             value={displayName}
@@ -104,9 +104,9 @@ export default function SignupScreen() {
         </View>
 
         <View>
-          <Text className="mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">Email</Text>
+          <Text className="mb-2 text-sm font-medium text-gray-700">Email</Text>
           <TextInput
-            className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+            className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900"
             placeholder="Enter your email"
             placeholderTextColor="#9CA3AF"
             value={email}
@@ -118,11 +118,11 @@ export default function SignupScreen() {
         </View>
 
         <View>
-          <Text className="mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+          <Text className="mb-2 text-sm font-medium text-gray-700">
             Password
           </Text>
           <TextInput
-            className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+            className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900"
             placeholder="Enter your password (min 6 characters)"
             placeholderTextColor="#9CA3AF"
             value={password}
@@ -146,7 +146,7 @@ export default function SignupScreen() {
         </TouchableOpacity>
 
         <View className="mt-4 flex-row justify-center">
-          <Text className="text-gray-600 dark:text-gray-400">Already have an account? </Text>
+          <Text className="text-gray-600">Already have an account? </Text>
           <Link href="/(auth)/login" asChild>
             <TouchableOpacity>
               <Text className="font-semibold text-blue-600">Sign In</Text>

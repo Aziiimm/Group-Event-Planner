@@ -2,6 +2,7 @@ import React from 'react';
 
 import { Redirect } from 'expo-router';
 import { Tabs } from 'expo-router';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 
 import { HapticTab } from '@/components/haptic-tab';
 import { IconSymbol } from '@/components/ui/icon-symbol';
@@ -26,23 +27,51 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
+        tabBarActiveTintColor: '#3B82F6', // Blue for active tabs
+        tabBarInactiveTintColor: '#9CA3AF', // Grey for inactive tabs
         headerShown: false,
         tabBarButton: HapticTab,
+        tabBarStyle: {
+          backgroundColor: '#fff',
+          borderTopWidth: 1,
+          borderTopColor: '#E5E7EB',
+        },
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
           title: 'Home',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
+          tabBarIcon: ({ color, focused }) => (
+            <MaterialIcons name="home" size={28} color={color} style={{ opacity: focused ? 1 : 0.6 }} />
+          ),
         }}
       />
       <Tabs.Screen
-        name="settings"
+        name="events"
         options={{
-          title: 'Settings',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="gearshape.fill" color={color} />,
+          title: 'Events',
+          tabBarIcon: ({ color, focused }) => (
+            <MaterialIcons name="event" size={28} color={color} style={{ opacity: focused ? 1 : 0.6 }} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="photos"
+        options={{
+          title: 'Photos',
+          tabBarIcon: ({ color, focused }) => (
+            <MaterialIcons name="photo-library" size={28} color={color} style={{ opacity: focused ? 1 : 0.6 }} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: 'Profile',
+          tabBarIcon: ({ color, focused }) => (
+            <MaterialIcons name={focused ? 'person' : 'person-outline'} size={28} color={color} />
+          ),
         }}
       />
     </Tabs>
