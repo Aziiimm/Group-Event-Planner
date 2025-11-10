@@ -167,7 +167,10 @@ export default function ProfileScreen() {
         {/* Navigation List */}
         <View className="mt-6 px-4">
           {/* Settings */}
-          <TouchableOpacity className="mb-2 flex-row items-center rounded-xl bg-white px-4 py-4 shadow-sm">
+          <TouchableOpacity
+            className="mb-2 flex-row items-center rounded-xl bg-white px-4 py-4 shadow-sm"
+            onPress={() => router.push('/(tabs)/profile/settings')}
+          >
             <View className="h-10 w-10 items-center justify-center rounded-lg bg-blue-100">
               <MaterialIcons name="settings" size={24} color="#2563EB" />
             </View>
