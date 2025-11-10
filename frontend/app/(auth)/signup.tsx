@@ -7,6 +7,8 @@ import { ActivityIndicator, Alert, Text, TextInput, TouchableOpacity, View } fro
 import { useAuth } from '@/hooks/use-auth';
 
 export default function SignupScreen() {
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -15,7 +17,7 @@ export default function SignupScreen() {
   const router = useRouter();
 
   const handleSignup = async () => {
-    if (!displayName || !email || !password) {
+    if (!firstName || !lastName || !displayName || !email || !password) {
       Alert.alert('Error', 'Please fill in all fields');
       return;
     }
@@ -26,12 +28,17 @@ export default function SignupScreen() {
     }
 
     setLoading(true);
-    const { error } = await signUp(email, password, displayName);
+    const { error, session } = await signUp(email, password, displayName, firstName, lastName);
     setLoading(false);
 
     if (error) {
       Alert.alert('Signup Failed', error.message);
+    } else if (session) {
+      // User is automatically signed in (email confirmation disabled)
+      // Redirect to main app
+      router.replace('/(tabs)');
     } else {
+      // Email confirmation is required
       Alert.alert('Success', 'Account created! Please check your email to verify your account.', [
         {
           text: 'OK',
@@ -51,6 +58,36 @@ export default function SignupScreen() {
       </View>
 
       <View className="space-y-4">
+        <View>
+          <Text className="mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+            First Name
+          </Text>
+          <TextInput
+            className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+            placeholder="Enter your first name"
+            placeholderTextColor="#9CA3AF"
+            value={firstName}
+            onChangeText={setFirstName}
+            autoCapitalize="words"
+            autoComplete="given-name"
+          />
+        </View>
+
+        <View>
+          <Text className="mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+            Last Name
+          </Text>
+          <TextInput
+            className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+            placeholder="Enter your last name"
+            placeholderTextColor="#9CA3AF"
+            value={lastName}
+            onChangeText={setLastName}
+            autoCapitalize="words"
+            autoComplete="family-name"
+          />
+        </View>
+
         <View>
           <Text className="mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
             Display Name

@@ -9,7 +9,13 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
-  signUp: (email: string, password: string, displayName: string) => Promise<{ error: any }>;
+  signUp: (
+    email: string,
+    password: string,
+    displayName: string,
+    firstName: string,
+    lastName: string,
+  ) => Promise<{ error: any; session: Session | null }>;
   signOut: () => Promise<void>;
 }
 
@@ -39,24 +45,79 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
-    return { error };
+
+    if (authError) {
+      return { error: authError };
+    }
+
+    // If login was successful and we have a user, update last_login in public.users
+    if (authData.user) {
+      const { error: dbError } = await supabase
+        .from('users')
+        .update({ last_login: new Date().toISOString() })
+        .eq('id', authData.user.id);
+
+      if (dbError) {
+        console.error('Error updating last_login:', dbError);
+        // Don't fail the login if last_login update fails, just log it
+      }
+    }
+
+    return { error: null };
   };
 
-  const signUp = async (email: string, password: string, displayName: string) => {
-    const { error } = await supabase.auth.signUp({
+  const signUp = async (
+    email: string,
+    password: string,
+    displayName: string,
+    firstName: string,
+    lastName: string,
+  ) => {
+    // Sign up the user in Supabase Auth
+    const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
       password,
       options: {
         data: {
           display_name: displayName,
+          first_name: firstName,
+          last_name: lastName,
         },
       },
     });
-    return { error };
+
+    if (authError) {
+      return { error: authError, session: null };
+    }
+
+    // If signup was successful and we have a user, create a row in public.users
+    if (authData.user) {
+      const now = new Date().toISOString();
+      const { error: dbError } = await supabase.from('users').insert({
+        id: authData.user.id, // Use the same ID as auth.users
+        email: email,
+        display_name: displayName,
+        first_name: firstName,
+        last_name: lastName,
+        created_at: now,
+        last_login: now, // Set last_login to the same value as created_at on first signup
+      });
+
+      if (dbError) {
+        console.error('Error creating user profile:', dbError);
+        // Note: User is already created in auth.users, but profile creation failed
+        // You might want to handle this differently based on your needs
+        return { error: dbError, session: null };
+      }
+    }
+
+    // Return the session if user is automatically signed in (email confirmation disabled)
+    // or null if email confirmation is required
+    return { error: null, session: authData.session };
   };
 
   const signOut = async () => {
