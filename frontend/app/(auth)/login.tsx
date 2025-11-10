@@ -41,17 +41,17 @@ export default function LoginScreen() {
   };
 
   return (
-    <View className="flex-1 justify-center bg-white px-6 dark:bg-gray-900">
+    <View className="flex-1 justify-center bg-white px-6">
       <View className="mb-8">
-        <Text className="mb-2 text-3xl font-bold text-gray-900 dark:text-white">Welcome Back</Text>
-        <Text className="text-gray-600 dark:text-gray-400">Sign in to continue</Text>
+        <Text className="mb-2 text-3xl font-bold text-gray-900">Welcome Back</Text>
+        <Text className="text-gray-600">Sign in to continue</Text>
       </View>
 
       <View className="space-y-4">
         <View>
-          <Text className="mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">Email</Text>
+          <Text className="mb-2 text-sm font-medium text-gray-700">Email</Text>
           <TextInput
-            className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+            className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900"
             placeholder="Enter your email"
             placeholderTextColor="#9CA3AF"
             value={email}
@@ -63,11 +63,11 @@ export default function LoginScreen() {
         </View>
 
         <View>
-          <Text className="mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+          <Text className="mb-2 text-sm font-medium text-gray-700">
             Password
           </Text>
           <TextInput
-            className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+            className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900"
             placeholder="Enter your password"
             placeholderTextColor="#9CA3AF"
             value={password}
@@ -91,7 +91,7 @@ export default function LoginScreen() {
         </TouchableOpacity>
 
         <View className="mt-4 flex-row justify-center">
-          <Text className="text-gray-600 dark:text-gray-400">Don't have an account? </Text>
+          <Text className="text-gray-600">Don't have an account? </Text>
           <Link href="/(auth)/signup" asChild>
             <TouchableOpacity>
               <Text className="font-semibold text-blue-600">Sign Up</Text>
