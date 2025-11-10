@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:latest
+    environment:
+      POSTGRES_DB: 
+      POSTGRES_USER: 
+      POSTGRES_PASSWORD: 
+    volumes:
+      - pg:/var/lib/postgresql/data
+    restart: always
+    healthcheck:
+      test: ["CMD", "pg_isready | grep '0'"]
+      interval: 30
+      timeout: 10
+      retries: 3
+      start_period: 5
+
+  redis:
+    image: redis:latest
+    environment:
+      REDIS_URL: 
+    volumes:
+      - redis:/data
+    restart: always
+    healthcheck:
+      test: ["CMD","redis-cli","ping | grep 'PONG'"]
+      interval: 30
+      timeout: 10
+      retries: 3
+      start_period: 5
