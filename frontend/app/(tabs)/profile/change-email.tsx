@@ -16,20 +16,39 @@ export default function ChangeEmailScreen() {
       return;
     }
 
+    if (!user?.id) return;
+
     try {
-      const { error } = await supabase.auth.updateUser({
+      // Update auth.users email (this will send confirmation email)
+      const { error: authError } = await supabase.auth.updateUser({
         email: newEmail,
       });
 
-      if (error) {
-        Alert.alert('Error', error.message || 'Failed to change email.');
-      } else {
-        Alert.alert(
-          'Success',
-          'Email change requested. Please check your new email for a confirmation link.',
-        );
-        setNewEmail('');
+      if (authError) {
+        Alert.alert('Error', authError.message || 'Failed to change email.');
+        return;
       }
+
+      // Also update public.users email to keep them in sync
+      // Note: This updates immediately, even before email confirmation
+      // If you want to wait for confirmation, you can use a database trigger
+      // or handle it after email confirmation
+      const { error: dbError } = await supabase
+        .from('users')
+        .update({ email: newEmail })
+        .eq('id', user.id);
+
+      if (dbError) {
+        // If public.users update fails, log it but don't fail the whole operation
+        // since auth.users was updated successfully
+        console.warn('Failed to update public.users email:', dbError);
+      }
+
+      Alert.alert(
+        'Success',
+        'Email change requested. Please check your new email for a confirmation link.',
+      );
+      setNewEmail('');
     } catch (err) {
       Alert.alert('Error', 'An error occurred. Please try again.');
     }

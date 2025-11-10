@@ -45,7 +45,8 @@ export default function EditProfileScreen() {
     if (!user?.id) return;
 
     try {
-      const { error } = await supabase
+      // Update public.users table
+      const { error: dbError } = await supabase
         .from('users')
         .update({
           first_name: firstName,
@@ -54,11 +55,26 @@ export default function EditProfileScreen() {
         })
         .eq('id', user.id);
 
-      if (error) {
+      if (dbError) {
         Alert.alert('Error', 'Failed to update profile. Please try again.');
-      } else {
-        Alert.alert('Success', 'Profile updated successfully!');
+        return;
       }
+
+      // Also update auth.users metadata to keep them in sync
+      const { error: authError } = await supabase.auth.updateUser({
+        data: {
+          first_name: firstName,
+          last_name: lastName,
+          display_name: displayName,
+        },
+      });
+
+      if (authError) {
+        // If auth update fails, still show success since public.users was updated
+        console.warn('Failed to update auth metadata:', authError);
+      }
+
+      Alert.alert('Success', 'Profile updated successfully!');
     } catch (err) {
       Alert.alert('Error', 'An error occurred. Please try again.');
     }
