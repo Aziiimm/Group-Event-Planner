@@ -9,4 +9,10 @@ export class AppController {
   getHello(): string {
     return this.appService.getHello();
   }
+
+  // /health endpoint
+  @Get('health') 
+  getHealth(): string {
+    return 'OK'; 
+  }
 }
