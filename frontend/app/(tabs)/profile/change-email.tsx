@@ -19,9 +19,12 @@ export default function ChangeEmailScreen() {
     if (!user?.id) return;
 
     try {
+      // Format email to lowercase before storing
+      const formattedEmail = newEmail.toLowerCase().trim();
+
       // Update auth.users email (this will send confirmation email)
       const { error: authError } = await supabase.auth.updateUser({
-        email: newEmail,
+        email: formattedEmail,
       });
 
       if (authError) {
@@ -35,7 +38,7 @@ export default function ChangeEmailScreen() {
       // or handle it after email confirmation
       const { error: dbError } = await supabase
         .from('users')
-        .update({ email: newEmail })
+        .update({ email: formattedEmail })
         .eq('id', user.id);
 
       if (dbError) {

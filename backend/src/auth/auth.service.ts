@@ -14,8 +14,14 @@ export class AuthService {
   async signup(signupDto: SignupDto) {
     const { email, password, displayName, firstName, lastName } = signupDto;
 
+    // Format fields before storing
+    const formattedEmail = email.toLowerCase().trim();
+    const formattedDisplayName = displayName.toLowerCase().trim();
+    const formattedFirstName = this.capitalizeFirstLetter(firstName.trim());
+    const formattedLastName = this.capitalizeFirstLetter(lastName.trim());
+
     // Check if display_name already exists (case-insensitive)
-    const lowercasedDisplayName = displayName.toLowerCase();
+    const lowercasedDisplayName = formattedDisplayName;
     const supabase = this.supabaseService.getClient();
 
     // Fetch all users and check for case-insensitive duplicate
@@ -43,13 +49,13 @@ export class AuthService {
 
     // Create user in Supabase Auth
     const { data: authData, error: authError } = await supabase.auth.signUp({
-      email,
+      email: formattedEmail,
       password,
       options: {
         data: {
-          display_name: displayName,
-          first_name: firstName,
-          last_name: lastName,
+          display_name: formattedDisplayName,
+          first_name: formattedFirstName,
+          last_name: formattedLastName,
         },
       },
     });
@@ -69,10 +75,10 @@ export class AuthService {
     const now = new Date().toISOString();
     const { error: dbError } = await supabase.from('users').insert({
       id: authData.user.id,
-      email: email,
-      display_name: displayName,
-      first_name: firstName,
-      last_name: lastName,
+      email: formattedEmail,
+      display_name: formattedDisplayName,
+      first_name: formattedFirstName,
+      last_name: formattedLastName,
       created_at: now,
       last_login: now,
     });
@@ -92,6 +98,18 @@ export class AuthService {
       user: authData.user,
       session: authData.session,
     };
+  }
+
+  /**
+   * Capitalizes the first letter of a string
+   * @param str - The string to capitalize
+   * @returns The string with first letter capitalized, rest lowercase
+   */
+  private capitalizeFirstLetter(str: string): string {
+    if (!str || str.length === 0) {
+      return str;
+    }
+    return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
   }
 }
 
