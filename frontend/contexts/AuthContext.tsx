@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 
+import Constants from 'expo-constants';
 import { Session, User } from '@supabase/supabase-js';
 
 import { supabase } from '@/lib/supabase';
@@ -77,47 +78,82 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     firstName: string,
     lastName: string,
   ) => {
-    // Sign up the user in Supabase Auth
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          display_name: displayName,
-          first_name: firstName,
-          last_name: lastName,
+    // Get API URL from environment or use default
+    // For production, set EXPO_PUBLIC_API_URL in your .env file
+    const apiUrl =
+      process.env.EXPO_PUBLIC_API_URL ||
+      Constants.expoConfig?.extra?.apiUrl ||
+      'http://localhost:3000';
+
+    try {
+      // Call backend signup endpoint for validation and user creation
+      const response = await fetch(`${apiUrl}/api/auth/signup`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
         },
-      },
-    });
-
-    if (authError) {
-      return { error: authError, session: null };
-    }
-
-    // If signup was successful and we have a user, create a row in public.users
-    if (authData.user) {
-      const now = new Date().toISOString();
-      const { error: dbError } = await supabase.from('users').insert({
-        id: authData.user.id, // Use the same ID as auth.users
-        email: email,
-        display_name: displayName,
-        first_name: firstName,
-        last_name: lastName,
-        created_at: now,
-        last_login: now, // Set last_login to the same value as created_at on first signup
+        body: JSON.stringify({
+          email,
+          password,
+          displayName,
+          firstName,
+          lastName,
+        }),
       });
 
-      if (dbError) {
-        console.error('Error creating user profile:', dbError);
-        // Note: User is already created in auth.users, but profile creation failed
-        // You might want to handle this differently based on your needs
-        return { error: dbError, session: null };
-      }
-    }
+      const data = await response.json();
 
-    // Return the session if user is automatically signed in (email confirmation disabled)
-    // or null if email confirmation is required
-    return { error: null, session: authData.session };
+      if (!response.ok) {
+        // Handle backend validation errors (e.g., duplicate display_name)
+        const errorMessage =
+          data.message || 'Signup failed. Please try again.';
+        return {
+          error: { message: errorMessage },
+          session: null,
+        };
+      }
+
+      // If backend created the user successfully, sign in with Supabase
+      // The backend creates the auth user, so we need to sign in to get the session
+      const { data: signInData, error: signInError } =
+        await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+
+      if (signInError) {
+        // If email confirmation is required, signInWithPassword will fail
+        // In that case, return success but no session (user needs to confirm email)
+        if (
+          signInError.message?.includes('Email not confirmed') ||
+          signInError.message?.includes('email_not_confirmed')
+        ) {
+          return {
+            error: null,
+            session: null, // User needs to confirm email first
+          };
+        }
+
+        return {
+          error: {
+            message:
+              'Account created but sign-in failed. Please try logging in.',
+          },
+          session: null,
+        };
+      }
+
+      return { error: null, session: signInData.session };
+    } catch (error: any) {
+      console.error('Signup error:', error);
+      return {
+        error: {
+          message:
+            error.message || 'Network error. Please check your connection.',
+        },
+        session: null,
+      };
+    }
   };
 
   const signOut = async () => {
