@@ -9,7 +9,7 @@ interface AuthContextType {
   session: Session | null;
   user: User | null;
   loading: boolean;
-  signIn: (email: string, password: string) => Promise<{ error: any }>;
+  signIn: (identifier: string, password: string) => Promise<{ error: any }>;
   signUp: (
     email: string,
     password: string,
@@ -45,30 +45,58 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  const signIn = async (email: string, password: string) => {
-    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+  const signIn = async (identifier: string, password: string) => {
+    // Get API URL from environment or use default
+    const apiUrl =
+      process.env.EXPO_PUBLIC_API_URL ||
+      Constants.expoConfig?.extra?.apiUrl ||
+      'http://localhost:3000';
 
-    if (authError) {
-      return { error: authError };
-    }
+    try {
+      // Call backend login endpoint (supports email or display_name)
+      const response = await fetch(`${apiUrl}/api/auth/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          identifier, // Can be email or display_name
+          password,
+        }),
+      });
 
-    // If login was successful and we have a user, update last_login in public.users
-    if (authData.user) {
-      const { error: dbError } = await supabase
-        .from('users')
-        .update({ last_login: new Date().toISOString() })
-        .eq('id', authData.user.id);
+      const data = await response.json();
 
-      if (dbError) {
-        console.error('Error updating last_login:', dbError);
-        // Don't fail the login if last_login update fails, just log it
+      if (!response.ok) {
+        // Handle backend validation errors
+        const errorMessage = data.message || 'Login failed. Please try again.';
+        return { error: { message: errorMessage } };
       }
-    }
 
-    return { error: null };
+      // Backend returns user and session, but we need to set the session in Supabase client
+      // The session token needs to be set in the Supabase client for it to work properly
+      if (data.session) {
+        // Set the session in Supabase client
+        const { error: sessionError } = await supabase.auth.setSession({
+          access_token: data.session.access_token,
+          refresh_token: data.session.refresh_token,
+        });
+
+        if (sessionError) {
+          return { error: sessionError };
+        }
+      }
+
+      return { error: null };
+    } catch (error: any) {
+      console.error('Login error:', error);
+      return {
+        error: {
+          message:
+            error.message || 'Network error. Please check your connection.',
+        },
+      };
+    }
   };
 
   const signUp = async (

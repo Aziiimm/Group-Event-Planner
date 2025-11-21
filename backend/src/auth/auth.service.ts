@@ -3,8 +3,10 @@ import {
   ConflictException,
   Injectable,
   InternalServerErrorException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
+import { LoginDto } from './dto/login.dto';
 import { SignupDto } from './dto/signup.dto';
 
 @Injectable()
@@ -92,6 +94,72 @@ export class AuthService {
       throw new InternalServerErrorException(
         'Account created but profile setup failed. Please contact support.',
       );
+    }
+
+    return {
+      user: authData.user,
+      session: authData.session,
+    };
+  }
+
+  async login(loginDto: LoginDto) {
+    const { identifier, password } = loginDto;
+    const supabase = this.supabaseService.getClient();
+
+    // Normalize identifier (lowercase and trim)
+    const normalizedIdentifier = identifier.toLowerCase().trim();
+
+    // Determine if identifier is an email (contains @) or display_name
+    const isEmail = normalizedIdentifier.includes('@');
+    let userEmail: string;
+
+    if (isEmail) {
+      // Identifier is an email, use it directly
+      userEmail = normalizedIdentifier;
+    } else {
+      // Identifier is a display_name, look up the user's email
+      // Fetch all users and check for case-insensitive match
+      const { data: users, error: lookupError } = await supabase
+        .from('users')
+        .select('email, display_name');
+
+      if (lookupError) {
+        throw new InternalServerErrorException('Error looking up user');
+      }
+
+      // Find user with matching display_name (case-insensitive)
+      const user = users?.find(
+        (u) => u.display_name?.toLowerCase() === normalizedIdentifier,
+      );
+
+      if (!user) {
+        throw new UnauthorizedException('Invalid credentials');
+      }
+
+      userEmail = user.email;
+    }
+
+    // Sign in with Supabase Auth using the email
+    const { data: authData, error: authError } =
+      await supabase.auth.signInWithPassword({
+        email: userEmail,
+        password,
+      });
+
+    if (authError || !authData.user) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    // Update last_login in public.users table
+    const now = new Date().toISOString();
+    const { error: dbError } = await supabase
+      .from('users')
+      .update({ last_login: now })
+      .eq('id', authData.user.id);
+
+    if (dbError) {
+      console.error('Error updating last_login:', dbError);
+      // Don't fail the login if last_login update fails, just log it
     }
 
     return {
