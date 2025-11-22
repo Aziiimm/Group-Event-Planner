@@ -41,17 +41,49 @@ export default function EditProfileScreen() {
     loadProfile();
   }, [user]);
 
+  const capitalizeFirstLetter = (str: string): string => {
+    if (!str || str.length === 0) {
+      return str;
+    }
+    return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+  };
+
   const handleSave = async () => {
     if (!user?.id) return;
 
     try {
+      // Format fields before storing
+      const formattedDisplayName = displayName.toLowerCase().trim();
+      const formattedFirstName = capitalizeFirstLetter(firstName.trim());
+      const formattedLastName = capitalizeFirstLetter(lastName.trim());
+
+      // Check if display_name already exists (excluding current user)
+      const { data: existingUsers, error: checkError } = await supabase
+        .from('users')
+        .select('id, display_name')
+        .neq('id', user.id);
+
+      if (!checkError && existingUsers) {
+        const duplicateExists = existingUsers.some(
+          (u) => u.display_name?.toLowerCase() === formattedDisplayName,
+        );
+
+        if (duplicateExists) {
+          Alert.alert(
+            'Error',
+            'This display name is already taken. Please choose a different name.',
+          );
+          return;
+        }
+      }
+
       // Update public.users table
       const { error: dbError } = await supabase
         .from('users')
         .update({
-          first_name: firstName,
-          last_name: lastName,
-          display_name: displayName,
+          first_name: formattedFirstName,
+          last_name: formattedLastName,
+          display_name: formattedDisplayName,
         })
         .eq('id', user.id);
 
@@ -63,9 +95,9 @@ export default function EditProfileScreen() {
       // Also update auth.users metadata to keep them in sync
       const { error: authError } = await supabase.auth.updateUser({
         data: {
-          first_name: firstName,
-          last_name: lastName,
-          display_name: displayName,
+          first_name: formattedFirstName,
+          last_name: formattedLastName,
+          display_name: formattedDisplayName,
         },
       });
 
