@@ -5,6 +5,7 @@ import { AppService } from './app.service';
 import { HealthModule } from './health/health.module';
 import { SupabaseModule } from './supabase/supabase.module';
 import { AuthModule } from './auth/auth.module';
+import { CirclesModule } from './circles/circles.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { AuthModule } from './auth/auth.module';
     SupabaseModule,
     AuthModule,
     HealthModule,
+    CirclesModule,
   ],
   controllers: [AppController],
   providers: [AppService],
