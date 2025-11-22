@@ -265,12 +265,9 @@ export default function CircleDetailScreen() {
   return (
     <View className="flex-1 bg-gray-50">
       {/* Header */}
-      <LinearGradient
-        colors={['#3B82F6', '#A855F7']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 0, y: 1 }}
+      <View
         style={{ paddingTop: insets.top }}
-        className="pb-6"
+        className="bg-blue-600 pb-6"
       >
         <View className="flex-row items-center px-6">
           <TouchableOpacity
@@ -286,7 +283,7 @@ export default function CircleDetailScreen() {
             )}
           </View>
         </View>
-      </LinearGradient>
+      </View>
 
       {/* Content */}
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
