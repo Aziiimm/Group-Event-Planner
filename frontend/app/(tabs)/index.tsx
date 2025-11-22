@@ -6,7 +6,9 @@ import { useRouter } from 'expo-router';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import {
   ActivityIndicator,
+  Alert,
   Image,
+  Modal,
   RefreshControl,
   ScrollView,
   Text,
@@ -68,6 +70,9 @@ export default function HomeScreen() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [invitationModalVisible, setInvitationModalVisible] = useState(false);
+  const [selectedInvitation, setSelectedInvitation] = useState<PendingInvitation | null>(null);
+  const [respondingToInvitation, setRespondingToInvitation] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -109,6 +114,53 @@ export default function HomeScreen() {
   const onRefresh = () => {
     setRefreshing(true);
     fetchData();
+  };
+
+  const handleInvitationPress = (invitation: PendingInvitation) => {
+    setSelectedInvitation(invitation);
+    setInvitationModalVisible(true);
+  };
+
+  const handleRespondToInvitation = async (response: 'accept' | 'decline') => {
+    if (!selectedInvitation) return;
+
+    try {
+      setRespondingToInvitation(true);
+      await circlesApi.respondToInvitation(selectedInvitation.id, response);
+
+      if (response === 'accept') {
+        const circleId = selectedInvitation.circle.id;
+        setInvitationModalVisible(false);
+        // Refresh data to update circles and remove invitation
+        fetchData();
+        // Show success and navigate
+        Alert.alert('Success', 'You have joined the circle!', [
+          {
+            text: 'OK',
+            onPress: () => {
+              setSelectedInvitation(null);
+              router.push(`/circle/${circleId}`);
+            },
+          },
+        ]);
+      } else {
+        Alert.alert('Success', 'Invitation declined', [
+          {
+            text: 'OK',
+            onPress: () => {
+              setInvitationModalVisible(false);
+              setSelectedInvitation(null);
+              // Refresh data to remove invitation from list
+              fetchData();
+            },
+          },
+        ]);
+      }
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to respond to invitation');
+    } finally {
+      setRespondingToInvitation(false);
+    }
   };
 
   const getInitials = () => {
@@ -153,9 +205,7 @@ export default function HomeScreen() {
         <View className="flex-row items-center justify-between px-6">
           <View className="flex-1">
             <Text className="text-3xl font-bold text-white">My Circles</Text>
-            <Text className="mt-1 text-base text-white/90">
-              Plan events with your groups
-            </Text>
+            <Text className="mt-1 text-base text-white/90">Plan events with your groups</Text>
           </View>
           {/* User Avatar */}
           <TouchableOpacity
@@ -170,9 +220,7 @@ export default function HomeScreen() {
       {/* Content */}
       <ScrollView
         className="flex-1"
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         showsVerticalScrollIndicator={false}
       >
         {/* Create Circle Button */}
@@ -182,9 +230,7 @@ export default function HomeScreen() {
             className="flex-row items-center justify-center rounded-xl bg-blue-600 py-4 shadow-sm"
           >
             <MaterialIcons name="add" size={24} color="#FFFFFF" />
-            <Text className="ml-2 text-base font-semibold text-white">
-              Create New Circle
-            </Text>
+            <Text className="ml-2 text-base font-semibold text-white">Create New Circle</Text>
           </TouchableOpacity>
         </View>
 
@@ -197,7 +243,7 @@ export default function HomeScreen() {
             {pendingInvitations.map((invitation) => (
               <TouchableOpacity
                 key={invitation.id}
-                onPress={() => router.push(`/circle/${invitation.circle.id}`)}
+                onPress={() => handleInvitationPress(invitation)}
                 className="mb-4 flex-row items-center rounded-2xl border-2 border-yellow-300 bg-yellow-50 p-4 shadow-sm"
               >
                 {/* Circle Image/Icon */}
@@ -242,9 +288,7 @@ export default function HomeScreen() {
           {circles.length === 0 ? (
             <View className="items-center py-12">
               <MaterialIcons name="group" size={64} color="#9CA3AF" />
-              <Text className="mt-4 text-lg font-semibold text-gray-600">
-                No circles yet
-              </Text>
+              <Text className="mt-4 text-lg font-semibold text-gray-600">No circles yet</Text>
               <Text className="mt-2 text-center text-gray-500">
                 Create your first circle to start planning events with friends
               </Text>
@@ -278,9 +322,7 @@ export default function HomeScreen() {
 
                 {/* Circle Info */}
                 <View className="ml-4 flex-1">
-                  <Text className="text-lg font-semibold text-gray-900">
-                    {circle.name}
-                  </Text>
+                  <Text className="text-lg font-semibold text-gray-900">{circle.name}</Text>
                   <View className="mt-1 flex-row items-center">
                     <MaterialIcons name="people" size={16} color="#6B7280" />
                     <Text className="ml-1 text-sm text-gray-600">
@@ -296,6 +338,99 @@ export default function HomeScreen() {
           )}
         </View>
       </ScrollView>
+
+      {/* Invitation Response Modal */}
+      <Modal
+        visible={invitationModalVisible}
+        animationType="fade"
+        transparent={true}
+        onRequestClose={() => {
+          setInvitationModalVisible(false);
+          setSelectedInvitation(null);
+        }}
+      >
+        <View className="flex-1 items-center justify-center bg-black/50">
+          <View className="mx-6 w-full max-w-sm rounded-2xl bg-white p-6 shadow-lg">
+            {/* Close Button */}
+            <View className="mb-2 flex-row justify-end">
+              <TouchableOpacity
+                onPress={() => {
+                  setInvitationModalVisible(false);
+                  setSelectedInvitation(null);
+                }}
+                className="h-8 w-8 items-center justify-center rounded-full bg-gray-100"
+              >
+                <MaterialIcons name="close" size={20} color="#6B7280" />
+              </TouchableOpacity>
+            </View>
+
+            {/* Circle Info */}
+            {selectedInvitation && (
+              <>
+                <View className="mb-4 items-center">
+                  <LinearGradient
+                    colors={['#FCD34D', '#F59E0B']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    className="h-16 w-16 items-center justify-center rounded-xl"
+                  >
+                    <Text className="text-2xl font-bold text-white">
+                      {selectedInvitation.circle.name.charAt(0).toUpperCase()}
+                    </Text>
+                  </LinearGradient>
+                  <Text className="mt-3 text-xl font-bold text-gray-900">
+                    {selectedInvitation.circle.name}
+                  </Text>
+                  {selectedInvitation.circle.description && (
+                    <Text className="mt-1 text-center text-sm text-gray-600">
+                      {selectedInvitation.circle.description}
+                    </Text>
+                  )}
+                  <Text className="mt-2 text-center text-sm text-gray-500">
+                    Invited by{' '}
+                    {selectedInvitation.inviter.first_name && selectedInvitation.inviter.last_name
+                      ? `${selectedInvitation.inviter.first_name} ${selectedInvitation.inviter.last_name}`
+                      : selectedInvitation.inviter.display_name}
+                  </Text>
+                </View>
+
+                {/* Question */}
+                <Text className="mb-6 text-center text-base text-gray-700">
+                  Would you like to join this circle?
+                </Text>
+
+                {/* Buttons */}
+                <View className="flex-row justify-center">
+                  <TouchableOpacity
+                    onPress={() => handleRespondToInvitation('decline')}
+                    disabled={respondingToInvitation}
+                    className="flex-row items-center justify-center rounded-xl border-2 border-gray-300 bg-white px-6 py-2.5"
+                    style={{ opacity: respondingToInvitation ? 0.6 : 1, marginRight: 16 }}
+                  >
+                    <MaterialIcons name="close" size={18} color="#6B7280" />
+                    <Text className="ml-1.5 text-sm font-semibold text-gray-700">Decline</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => handleRespondToInvitation('accept')}
+                    disabled={respondingToInvitation}
+                    className="flex-row items-center justify-center rounded-xl bg-green-600 px-6 py-2.5"
+                    style={{ opacity: respondingToInvitation ? 0.6 : 1, marginLeft: 16 }}
+                  >
+                    {respondingToInvitation ? (
+                      <ActivityIndicator size="small" color="#FFFFFF" />
+                    ) : (
+                      <>
+                        <MaterialIcons name="check" size={18} color="#FFFFFF" />
+                        <Text className="ml-1.5 text-sm font-semibold text-white">Accept</Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }

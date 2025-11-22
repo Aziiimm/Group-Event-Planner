@@ -340,9 +340,7 @@ export default function CircleDetailScreen() {
 
         {/* Members Section */}
         <View className="px-6 pt-6">
-          <Text className="mb-4 text-xl font-bold text-gray-900">
-            Members ({members.length})
-          </Text>
+          <Text className="mb-5 text-xl font-bold text-gray-900">Members ({members.length})</Text>
 
           {members.length === 0 && pendingInvitations.length === 0 ? (
             <View className="items-center py-8">
@@ -350,14 +348,16 @@ export default function CircleDetailScreen() {
               <Text className="mt-4 text-gray-600">No members yet</Text>
             </View>
           ) : (
-            <View className="space-y-3">
+            <View>
               {/* Active Members */}
               {members
                 .filter((member) => member.user) // Filter out members with null user data
-                .map((member) => (
+                .map((member, index) => (
                   <View
                     key={member.id}
-                    className="flex-row items-center rounded-xl bg-white p-4 shadow-sm"
+                    className={`flex-row items-center rounded-xl bg-white p-5 shadow-sm ${
+                      index < members.length - 1 || pendingInvitations.length > 0 ? 'mb-3' : ''
+                    }`}
                   >
                     {/* Avatar */}
                     <LinearGradient
@@ -377,22 +377,22 @@ export default function CircleDetailScreen() {
 
                     {/* Member Info */}
                     <View className="ml-4 flex-1">
-                      <View className="flex-row items-center">
+                      <View className="flex-row flex-wrap items-center">
                         <Text className="text-base font-semibold text-gray-900">
                           {getDisplayName(member)}
                         </Text>
                         {member.role === 'owner' && (
-                          <View className="ml-2 rounded bg-blue-100 px-2 py-0.5">
+                          <View className="ml-2 rounded bg-blue-100 px-2.5 py-1">
                             <Text className="text-xs font-semibold text-blue-700">Owner</Text>
                           </View>
                         )}
                         {member.role === 'admin' && (
-                          <View className="ml-2 rounded bg-purple-100 px-2 py-0.5">
+                          <View className="ml-2 rounded bg-purple-100 px-2.5 py-1">
                             <Text className="text-xs font-semibold text-purple-700">Admin</Text>
                           </View>
                         )}
                       </View>
-                      <Text className="mt-0.5 text-sm text-gray-600">
+                      <Text className="mt-1.5 text-sm text-gray-600">
                         {member.user?.email || 'No email'}
                       </Text>
                     </View>
@@ -402,13 +402,15 @@ export default function CircleDetailScreen() {
               {/* Pending Invitations */}
               {pendingInvitations.length > 0 && (
                 <>
-                  {members.length > 0 && <View className="my-2 border-t border-gray-200" />}
+                  {members.length > 0 && <View className="my-4 border-t border-gray-200" />}
                   {pendingInvitations
                     .filter((invitation) => invitation.invitee) // Filter out null invitees
-                    .map((invitation) => (
+                    .map((invitation, index) => (
                       <View
                         key={invitation.id}
-                        className="flex-row items-center rounded-xl bg-white p-4 shadow-sm opacity-75"
+                        className={`flex-row items-center rounded-xl bg-white p-5 opacity-75 shadow-sm ${
+                          index < pendingInvitations.length - 1 ? 'mb-3' : ''
+                        }`}
                       >
                         {/* Avatar */}
                         <LinearGradient
@@ -428,17 +430,17 @@ export default function CircleDetailScreen() {
 
                         {/* Invitee Info */}
                         <View className="ml-4 flex-1">
-                          <View className="flex-row items-center">
+                          <View className="flex-row flex-wrap items-center">
                             <Text className="text-base font-semibold text-gray-900">
                               {invitation.invitee?.first_name && invitation.invitee?.last_name
                                 ? `${invitation.invitee.first_name} ${invitation.invitee.last_name}`
                                 : invitation.invitee?.display_name || 'Unknown User'}
                             </Text>
-                            <View className="ml-2 rounded bg-yellow-100 px-2 py-0.5">
+                            <View className="ml-2 rounded bg-yellow-100 px-2.5 py-1">
                               <Text className="text-xs font-semibold text-yellow-700">Pending</Text>
                             </View>
                           </View>
-                          <Text className="mt-0.5 text-sm text-gray-600">
+                          <Text className="mt-1.5 text-sm text-gray-600">
                             {invitation.invitee?.email || 'No email'}
                           </Text>
                         </View>
@@ -459,7 +461,10 @@ export default function CircleDetailScreen() {
         onRequestClose={() => setInviteModalVisible(false)}
       >
         <View className="flex-1 items-center justify-end bg-black/50">
-          <View className="w-full rounded-t-3xl bg-white p-6" style={{ paddingBottom: insets.bottom + 24 }}>
+          <View
+            className="w-full rounded-t-3xl bg-white p-6"
+            style={{ paddingBottom: insets.bottom + 24 }}
+          >
             <View className="mb-4 flex-row items-center justify-between">
               <Text className="text-2xl font-bold text-gray-900">Invite Members</Text>
               <TouchableOpacity onPress={() => setInviteModalVisible(false)}>
@@ -543,4 +548,3 @@ export default function CircleDetailScreen() {
     </View>
   );
 }
-
