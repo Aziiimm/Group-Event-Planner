@@ -23,6 +23,20 @@ export default function RootLayout() {
         <Stack>
           <Stack.Screen name="(auth)" options={{ headerShown: false }} />
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen 
+            name="circle/[id]" 
+            options={{ 
+              headerShown: false,
+              title: 'Circle Details'
+            }} 
+          />
+          <Stack.Screen 
+            name="create-circle" 
+            options={{ 
+              headerShown: false,
+              title: 'Create Circle'
+            }} 
+          />
           <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
         </Stack>
         <StatusBar style="auto" />
