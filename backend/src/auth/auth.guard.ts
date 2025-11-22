@@ -34,10 +34,26 @@ export class AuthGuard implements CanActivate {
     }
 
     try {
+      // Create a fresh client for each request to avoid caching issues
+      const supabaseUrl = this.configService.get<string>('SUPABASE_URL');
+      const supabaseAnonKey = this.configService.get<string>('SUPABASE_ANON_KEY');
+      
+      if (!supabaseUrl || !supabaseAnonKey) {
+        throw new UnauthorizedException('Missing Supabase configuration');
+      }
+      
+      // Create a new client instance for this request to ensure fresh token validation
+      const freshClient = createClient(supabaseUrl, supabaseAnonKey, {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+        },
+      });
+
       const {
         data: { user },
         error,
-      } = await this.supabase.auth.getUser(token);
+      } = await freshClient.auth.getUser(token);
 
       if (error || !user) {
         throw new UnauthorizedException('Invalid or expired token');

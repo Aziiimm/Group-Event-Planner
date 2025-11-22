@@ -104,7 +104,10 @@ export class AuthService {
 
   async login(loginDto: LoginDto) {
     const { identifier, password } = loginDto;
-    const supabase = this.supabaseService.getClient();
+    // Use service role client for database lookups (bypasses RLS)
+    const supabaseService = this.supabaseService.getClient();
+    // Use anon client for authentication (creates proper session for frontend)
+    const supabaseAnon = this.supabaseService.getAnonClient();
 
     // Normalize identifier (lowercase and trim)
     const normalizedIdentifier = identifier.toLowerCase().trim();
@@ -118,8 +121,8 @@ export class AuthService {
       userEmail = normalizedIdentifier;
     } else {
       // Identifier is a display_name, look up the user's email
-      // Fetch all users and check for case-insensitive match
-      const { data: users, error: lookupError } = await supabase
+      // Use service role client to bypass RLS for user lookup
+      const { data: users, error: lookupError } = await supabaseService
         .from('users')
         .select('email, display_name');
 
@@ -139,9 +142,10 @@ export class AuthService {
       userEmail = user.email;
     }
 
-    // Sign in with Supabase Auth using the email
+    // Sign in with Supabase Auth using the anon client
+    // This creates a session that's compatible with the frontend anon client
     const { data: authData, error: authError } =
-      await supabase.auth.signInWithPassword({
+      await supabaseAnon.auth.signInWithPassword({
         email: userEmail,
         password,
       });
@@ -150,9 +154,9 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    // Update last_login in public.users table
+    // Update last_login in public.users table using service role client
     const now = new Date().toISOString();
-    const { error: dbError } = await supabase
+    const { error: dbError } = await supabaseService
       .from('users')
       .update({ last_login: now })
       .eq('id', authData.user.id);

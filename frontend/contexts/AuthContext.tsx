@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 
 import Constants from 'expo-constants';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Session, User } from '@supabase/supabase-js';
 
 import { supabase } from '@/lib/supabase';
@@ -36,7 +37,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      // Update state based on auth events
+      // TOKEN_REFRESHED events are automatically handled by Supabase
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
@@ -83,8 +86,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
 
         if (sessionError) {
+          console.error('Error setting session:', sessionError);
           return { error: sessionError };
         }
+
+        // Ensure the session is properly set and persisted
+        // Wait a bit to ensure AsyncStorage has been updated
+        await new Promise((resolve) => setTimeout(resolve, 200));
+        
+        // Verify the session was set correctly - retry up to 3 times
+        let verifySession = null;
+        for (let attempt = 0; attempt < 3; attempt++) {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session) {
+            verifySession = session;
+            break;
+          }
+          // Wait before retrying
+          await new Promise((resolve) => setTimeout(resolve, 100));
+        }
+        
+        if (!verifySession) {
+          console.error('Failed to verify session after setting');
+          return {
+            error: {
+              message: 'Failed to set session. Please try again.',
+            },
+          };
+        }
+      } else {
+        return {
+          error: {
+            message: 'No session returned from server. Please try again.',
+          },
+        };
       }
 
       return { error: null };
@@ -185,7 +220,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signOut = async () => {
+    // Force clear any remaining session data immediately
+    setSession(null);
+    setUser(null);
+    
+    // Clear the session from Supabase
     await supabase.auth.signOut();
+    
+    // Explicitly clear Supabase auth storage keys from AsyncStorage
+    // Supabase stores session data with keys like 'sb-<project-ref>-auth-token'
+    try {
+      const keys = await AsyncStorage.getAllKeys();
+      const supabaseKeys = keys.filter((key) => 
+        key.includes('supabase') || key.includes('sb-') || key.includes('auth-token')
+      );
+      if (supabaseKeys.length > 0) {
+        await AsyncStorage.multiRemove(supabaseKeys);
+      }
+    } catch (error) {
+      console.error('Error clearing AsyncStorage:', error);
+    }
+    
+    // Wait a bit to ensure everything is cleared
+    await new Promise((resolve) => setTimeout(resolve, 300));
   };
 
   const value = {
