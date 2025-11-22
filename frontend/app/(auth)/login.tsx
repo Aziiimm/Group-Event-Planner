@@ -7,21 +7,21 @@ import { ActivityIndicator, Alert, Text, TextInput, TouchableOpacity, View } fro
 import { useAuth } from '@/hooks/use-auth';
 
 export default function LoginScreen() {
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const { signIn } = useAuth();
   const router = useRouter();
 
   const handleLogin = async () => {
-    if (!email || !password) {
+    if (!identifier || !password) {
       Alert.alert('Error', 'Please fill in all fields');
       return;
     }
 
     setLoading(true);
     try {
-      const { error } = await signIn(email, password);
+      const { error } = await signIn(identifier, password);
 
       if (error) {
         console.error('Login error:', error);
@@ -49,16 +49,17 @@ export default function LoginScreen() {
 
       <View className="space-y-4">
         <View>
-          <Text className="mb-2 text-sm font-medium text-gray-700">Email</Text>
+          <Text className="mb-2 text-sm font-medium text-gray-700">
+            Email or Display Name
+          </Text>
           <TextInput
             className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900"
-            placeholder="Enter your email"
+            placeholder="Enter your email or display name"
             placeholderTextColor="#9CA3AF"
-            value={email}
-            onChangeText={setEmail}
+            value={identifier}
+            onChangeText={setIdentifier}
             autoCapitalize="none"
-            keyboardType="email-address"
-            autoComplete="email"
+            autoComplete="username"
           />
         </View>
 
