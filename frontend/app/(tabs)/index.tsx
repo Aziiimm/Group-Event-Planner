@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import {
@@ -77,6 +77,15 @@ export default function HomeScreen() {
   useEffect(() => {
     fetchData();
   }, [user]);
+
+  // Refresh data when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      if (user?.id) {
+        fetchData();
+      }
+    }, [user?.id])
+  );
 
   const fetchData = async () => {
     if (!user?.id) return;
@@ -248,9 +257,15 @@ export default function HomeScreen() {
                   colors={['#FCD34D', '#F59E0B']}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
-                  className="h-16 w-16 items-center justify-center rounded-xl"
+                  style={{ 
+                    width: 64, 
+                    height: 64, 
+                    borderRadius: 16,
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
                 >
-                  <Text className="text-2xl font-bold text-white">
+                  <Text style={{ fontSize: 32, fontWeight: 'bold', color: '#FFFFFF' }}>
                     {invitation.circle.name.charAt(0).toUpperCase()}
                   </Text>
                 </LinearGradient>
@@ -302,16 +317,23 @@ export default function HomeScreen() {
                   colors={['#60A5FA', '#A78BFA']}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
-                  className="h-16 w-16 items-center justify-center rounded-xl"
+                  style={{ 
+                    width: 64, 
+                    height: 64, 
+                    borderRadius: 16,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    overflow: 'hidden'
+                  }}
                 >
                   {getCircleImage(circle.name) ? (
                     <Image
                       source={{ uri: getCircleImage(circle.name) || '' }}
-                      className="h-full w-full rounded-xl"
+                      style={{ width: 64, height: 64 }}
                       resizeMode="cover"
                     />
                   ) : (
-                    <Text className="text-2xl font-bold text-white">
+                    <Text style={{ fontSize: 32, fontWeight: 'bold', color: '#FFFFFF' }}>
                       {circle.name.charAt(0).toUpperCase()}
                     </Text>
                   )}
@@ -369,9 +391,15 @@ export default function HomeScreen() {
                     colors={['#FCD34D', '#F59E0B']}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 1 }}
-                    className="h-16 w-16 items-center justify-center rounded-xl"
+                    style={{ 
+                      width: 64, 
+                      height: 64, 
+                      borderRadius: 16,
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}
                   >
-                    <Text className="text-2xl font-bold text-white">
+                    <Text style={{ fontSize: 32, fontWeight: 'bold', color: '#FFFFFF' }}>
                       {selectedInvitation.circle.name.charAt(0).toUpperCase()}
                     </Text>
                   </LinearGradient>

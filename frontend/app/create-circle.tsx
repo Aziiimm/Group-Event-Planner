@@ -1,7 +1,6 @@
 import { useState } from 'react';
 
-import { LinearGradient } from 'expo-linear-gradient';
-import { router, useLocalSearchParams } from 'expo-router';
+import { router } from 'expo-router';
 
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { Alert, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
@@ -23,18 +22,11 @@ export default function CreateCircleScreen() {
 
     setLoading(true);
     try {
-      await circlesApi.createCircle(name.trim(), description.trim() || undefined);
-      Alert.alert('Success', 'Circle created successfully!', [
-        {
-          text: 'OK',
-          onPress: () => {
-            router.back();
-          },
-        },
-      ]);
+      const circle = await circlesApi.createCircle(name.trim(), description.trim() || undefined);
+      // Navigate to the newly created circle's detail page
+      router.replace(`/circle/${circle.id}`);
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Failed to create circle');
-    } finally {
       setLoading(false);
     }
   };
@@ -42,12 +34,9 @@ export default function CreateCircleScreen() {
   return (
     <View className="flex-1 bg-gray-50">
       {/* Header */}
-      <LinearGradient
-        colors={['#3B82F6', '#A855F7']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 0, y: 1 }}
+      <View
         style={{ paddingTop: insets.top }}
-        className="pb-6"
+        className="bg-blue-600 pb-6"
       >
         <View className="flex-row items-center px-6">
           <TouchableOpacity
@@ -58,7 +47,7 @@ export default function CreateCircleScreen() {
           </TouchableOpacity>
           <Text className="flex-1 text-2xl font-bold text-white">Create Circle</Text>
         </View>
-      </LinearGradient>
+      </View>
 
       {/* Content */}
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>

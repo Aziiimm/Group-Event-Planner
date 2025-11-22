@@ -361,7 +361,7 @@ export default function CircleDetailScreen() {
                       colors={['#60A5FA', '#A78BFA']}
                       start={{ x: 0, y: 0 }}
                       end={{ x: 1, y: 1 }}
-                      className="h-12 w-12 items-center justify-center rounded-full"
+                      className="h-12 w-12 items-center justify-center rounded-xl"
                     >
                       <Text className="text-base font-bold text-white">
                         {getInitials(
@@ -414,7 +414,7 @@ export default function CircleDetailScreen() {
                           colors={['#9CA3AF', '#6B7280']}
                           start={{ x: 0, y: 0 }}
                           end={{ x: 1, y: 1 }}
-                          className="h-12 w-12 items-center justify-center rounded-full"
+                          className="h-12 w-12 items-center justify-center rounded-xl"
                         >
                           <Text className="text-base font-bold text-white">
                             {getInitials(
@@ -507,7 +507,7 @@ export default function CircleDetailScreen() {
                       colors={['#60A5FA', '#A78BFA']}
                       start={{ x: 0, y: 0 }}
                       end={{ x: 1, y: 1 }}
-                      className="h-10 w-10 items-center justify-center rounded-full"
+                      className="h-10 w-10 items-center justify-center rounded-xl"
                     >
                       <Text className="text-sm font-bold text-white">
                         {getInitials(item.first_name, item.last_name, item.display_name)}
