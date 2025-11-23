@@ -185,3 +185,50 @@ export const circlesApi = {
     return apiResponse.json();
   },
 };
+
+// Events API
+export const eventsApi = {
+  // Create an event for a circle
+  createEvent: async (
+    circleId: string,
+    eventData: {
+      title: string;
+      date_time: string;
+      location: string;
+      description?: string;
+    },
+  ) => {
+    const response = await apiRequest(`/events/circle/${circleId}`, {
+      method: 'POST',
+      body: JSON.stringify(eventData),
+    });
+    return response.json();
+  },
+
+  // Get all events for a circle
+  getCircleEvents: async (circleId: string) => {
+    const response = await apiRequest(`/events/circle/${circleId}`);
+    return response.json();
+  },
+
+  // Get event details
+  getEvent: async (eventId: string) => {
+    const response = await apiRequest(`/events/${eventId}`);
+    return response.json();
+  },
+
+  // RSVP to an event (going or not_going)
+  rsvpToEvent: async (eventId: string, status: 'going' | 'not_going') => {
+    const response = await apiRequest(`/events/${eventId}/rsvp`, {
+      method: 'POST',
+      body: JSON.stringify({ status }),
+    });
+    return response.json();
+  },
+
+  // Get all RSVPs for an event
+  getEventRSVPs: async (eventId: string) => {
+    const response = await apiRequest(`/events/${eventId}/rsvps`);
+    return response.json();
+  },
+};

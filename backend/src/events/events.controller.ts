@@ -20,6 +20,7 @@ import { RSVPDto } from './dto/rsvp.dto';
 export class EventsController {
   constructor(private readonly eventsService: EventsService) {}
 
+  // Specific routes (with 'circle' literal) must come before dynamic routes (with :id)
   @Post('circle/:circleId')
   @HttpCode(HttpStatus.CREATED)
   async createEvent(
@@ -39,12 +40,7 @@ export class EventsController {
     return await this.eventsService.getCircleEvents(circleId, user.id);
   }
 
-  @Get(':id')
-  @HttpCode(HttpStatus.OK)
-  async getEvent(@CurrentUser() user: User, @Param('id') id: string) {
-    return await this.eventsService.getEvent(id, user.id);
-  }
-
+  // Dynamic routes (with :id) come after specific routes
   @Post(':id/rsvp')
   @HttpCode(HttpStatus.OK)
   async rsvpToEvent(
@@ -59,5 +55,11 @@ export class EventsController {
   @HttpCode(HttpStatus.OK)
   async getEventRSVPs(@CurrentUser() user: User, @Param('id') id: string) {
     return await this.eventsService.getEventRSVPs(id, user.id);
+  }
+
+  @Get(':id')
+  @HttpCode(HttpStatus.OK)
+  async getEvent(@CurrentUser() user: User, @Param('id') id: string) {
+    return await this.eventsService.getEvent(id, user.id);
   }
 }

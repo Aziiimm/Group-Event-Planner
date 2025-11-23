@@ -18,7 +18,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/hooks/use-auth';
-import { circlesApi } from '@/lib/api';
+import { circlesApi, eventsApi } from '@/lib/api';
 
 interface CircleMember {
   id: string;
@@ -79,6 +79,7 @@ export default function CircleDetailScreen() {
   const [circle, setCircle] = useState<Circle | null>(null);
   const [members, setMembers] = useState<CircleMember[]>([]);
   const [pendingInvitations, setPendingInvitations] = useState<PendingInvitation[]>([]);
+  const [events, setEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [inviteModalVisible, setInviteModalVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -125,6 +126,26 @@ export default function CircleDetailScreen() {
           // Silently fail for pending invitations list
           setPendingInvitations([]);
         }
+      }
+
+      // Fetch events for this circle (only if user is a member)
+      // Do this separately to not block circle loading
+      if (!circleData.hasPendingInvitation) {
+        eventsApi
+          .getCircleEvents(id)
+          .then((eventsData: any[]) => {
+            // Filter to only upcoming events
+            const upcomingEvents = (eventsData || []).filter(
+              (event: any) => event?.status === 'upcoming',
+            );
+            setEvents(upcomingEvents || []);
+          })
+          .catch(() => {
+            // Silently fail for events - not critical
+            setEvents([]);
+          });
+      } else {
+        setEvents([]);
       }
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Failed to load circle data');
@@ -194,7 +215,6 @@ export default function CircleDetailScreen() {
       const filtered = results.filter((u: SearchUser) => !memberIds.has(u.id));
       setSearchResults(filtered);
     } catch (error: any) {
-      console.error('Search error:', error);
       setSearchResults([]);
     } finally {
       setSearching(false);
@@ -244,6 +264,41 @@ export default function CircleDetailScreen() {
     return member.user.display_name || 'Unknown User';
   };
 
+  const formatEventDateTime = (dateTimeString: string) => {
+    try {
+      const date = new Date(dateTimeString);
+      const now = new Date();
+      const diffDays = Math.floor((date.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+
+      if (diffDays === 0) {
+        return `Today at ${date.toLocaleTimeString('en-US', {
+          hour: 'numeric',
+          minute: '2-digit',
+        })}`;
+      } else if (diffDays === 1) {
+        return `Tomorrow at ${date.toLocaleTimeString('en-US', {
+          hour: 'numeric',
+          minute: '2-digit',
+        })}`;
+      } else if (diffDays > 1 && diffDays <= 7) {
+        return date.toLocaleDateString('en-US', {
+          weekday: 'long',
+          hour: 'numeric',
+          minute: '2-digit',
+        });
+      } else {
+        return date.toLocaleDateString('en-US', {
+          month: 'short',
+          day: 'numeric',
+          hour: 'numeric',
+          minute: '2-digit',
+        });
+      }
+    } catch {
+      return dateTimeString;
+    }
+  };
+
   const canInvite = circle?.userRole === 'owner' || circle?.userRole === 'admin';
 
   if (loading) {
@@ -265,10 +320,7 @@ export default function CircleDetailScreen() {
   return (
     <View className="flex-1 bg-gray-50">
       {/* Header */}
-      <View
-        style={{ paddingTop: insets.top }}
-        className="bg-blue-600 pb-6"
-      >
+      <View style={{ paddingTop: insets.top }} className="bg-blue-600 pb-6">
         <View className="flex-row items-center px-6">
           <TouchableOpacity
             onPress={() => router.back()}
@@ -332,6 +384,75 @@ export default function CircleDetailScreen() {
               <MaterialIcons name="person-add" size={20} color="#FFFFFF" />
               <Text className="ml-2 text-base font-semibold text-white">Invite Members</Text>
             </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Create Event Button (for all members) */}
+        {circle?.userRole && !circle?.hasPendingInvitation && (
+          <View className={`px-6 ${canInvite ? 'pt-4' : 'pt-6'}`}>
+            <TouchableOpacity
+              onPress={() => router.push(`/events/create?circleId=${circle.id}` as any)}
+              className="flex-row items-center justify-center rounded-xl bg-blue-600 py-3 shadow-sm"
+            >
+              <MaterialIcons name="event" size={20} color="#FFFFFF" />
+              <Text className="ml-2 text-base font-semibold text-white">Create Event</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Events Section */}
+        {circle?.userRole && !circle?.hasPendingInvitation && (
+          <View className="px-6 pt-6">
+            <Text className="mb-5 text-xl font-bold text-gray-900">
+              Events ({events?.length || 0})
+            </Text>
+
+            {!events || events.length === 0 ? (
+              <View className="items-center rounded-xl bg-white py-8 shadow-sm">
+                <MaterialIcons name="event" size={48} color="#9CA3AF" />
+                <Text className="mt-4 text-gray-600">No upcoming events</Text>
+              </View>
+            ) : (
+              <View>
+                {events
+                  .filter((event) => event && event.id && event.title)
+                  .map((event, index) => (
+                    <TouchableOpacity
+                      key={event.id}
+                      onPress={() => router.push(`/events/${event.id}` as any)}
+                      className={`mb-3 flex-row items-center rounded-xl bg-white p-4 shadow-sm ${
+                        index === events.length - 1 ? 'mb-0' : ''
+                      }`}
+                    >
+                      <LinearGradient
+                        colors={['#60A5FA', '#A78BFA']}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                        className="h-12 w-12 items-center justify-center rounded-xl"
+                      >
+                        <MaterialIcons name="event" size={24} color="#FFFFFF" />
+                      </LinearGradient>
+                      <View className="ml-3 flex-1">
+                        <Text className="text-base font-semibold text-gray-900">
+                          {event.title || 'Untitled Event'}
+                        </Text>
+                        {event.date_time && (
+                          <Text className="mt-1 text-sm text-gray-600">
+                            {formatEventDateTime(event.date_time)}
+                          </Text>
+                        )}
+                        {event.location && (
+                          <View className="mt-1 flex-row items-center">
+                            <MaterialIcons name="location-on" size={14} color="#6B7280" />
+                            <Text className="ml-1 text-xs text-gray-600">{event.location}</Text>
+                          </View>
+                        )}
+                      </View>
+                      <MaterialIcons name="chevron-right" size={24} color="#9CA3AF" />
+                    </TouchableOpacity>
+                  ))}
+              </View>
+            )}
           </View>
         )}
 
