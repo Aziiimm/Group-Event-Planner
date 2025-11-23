@@ -13,43 +13,43 @@ const getApiUrl = () => {
 // Ensures we get a fresh session, especially after logout/login
 const getAuthToken = async (retryCount = 0): Promise<string | null> => {
   const { supabase } = await import('./supabase');
-  
+
   try {
     // Get the current session - getSession() reads from storage
     // We'll try up to 3 times with increasing delays to handle race conditions
     let session = null;
     let error = null;
-    
+
     for (let attempt = 0; attempt < 3; attempt++) {
       const result = await supabase.auth.getSession();
       session = result.data.session;
       error = result.error;
-      
+
       if (session || error) {
         break;
       }
-      
+
       // Wait before retrying (exponential backoff)
       if (attempt < 2) {
         await new Promise((resolve) => setTimeout(resolve, 100 * (attempt + 1)));
       }
     }
-    
+
     if (error) {
       console.error('Error getting session:', error);
       return null;
     }
-    
+
     // If still no session after retries, return null
     if (!session) {
       return null;
     }
-    
+
     // Check if token is expired or about to expire (within 60 seconds)
     const expiresAt = session.expires_at;
     if (expiresAt) {
       const expiresIn = expiresAt - Math.floor(Date.now() / 1000);
-      
+
       // If token is expired or expires soon, try to refresh it
       if (expiresIn < 60) {
         try {
@@ -57,7 +57,7 @@ const getAuthToken = async (retryCount = 0): Promise<string | null> => {
             data: { session: refreshedSession },
             error: refreshError,
           } = await supabase.auth.refreshSession();
-          
+
           if (!refreshError && refreshedSession?.access_token) {
             return refreshedSession.access_token;
           } else if (refreshError) {
@@ -80,7 +80,7 @@ const getAuthToken = async (retryCount = 0): Promise<string | null> => {
         }
       }
     }
-    
+
     return session.access_token || null;
   } catch (error) {
     console.error('Error in getAuthToken:', error);
@@ -186,3 +186,49 @@ export const circlesApi = {
   },
 };
 
+// Events API
+export const eventsApi = {
+  // Create an event for a circle
+  createEvent: async (
+    circleId: string,
+    eventData: {
+      title: string;
+      date_time: string;
+      location: string;
+      description?: string;
+    },
+  ) => {
+    const response = await apiRequest(`/events/circle/${circleId}`, {
+      method: 'POST',
+      body: JSON.stringify(eventData),
+    });
+    return response.json();
+  },
+
+  // Get all events for a circle
+  getCircleEvents: async (circleId: string) => {
+    const response = await apiRequest(`/events/circle/${circleId}`);
+    return response.json();
+  },
+
+  // Get event details
+  getEvent: async (eventId: string) => {
+    const response = await apiRequest(`/events/${eventId}`);
+    return response.json();
+  },
+
+  // RSVP to an event (going or not_going)
+  rsvpToEvent: async (eventId: string, status: 'going' | 'not_going') => {
+    const response = await apiRequest(`/events/${eventId}/rsvp`, {
+      method: 'POST',
+      body: JSON.stringify({ status }),
+    });
+    return response.json();
+  },
+
+  // Get all RSVPs for an event
+  getEventRSVPs: async (eventId: string) => {
+    const response = await apiRequest(`/events/${eventId}/rsvps`);
+    return response.json();
+  },
+};
