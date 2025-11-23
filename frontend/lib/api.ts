@@ -13,43 +13,43 @@ const getApiUrl = () => {
 // Ensures we get a fresh session, especially after logout/login
 const getAuthToken = async (retryCount = 0): Promise<string | null> => {
   const { supabase } = await import('./supabase');
-  
+
   try {
     // Get the current session - getSession() reads from storage
     // We'll try up to 3 times with increasing delays to handle race conditions
     let session = null;
     let error = null;
-    
+
     for (let attempt = 0; attempt < 3; attempt++) {
       const result = await supabase.auth.getSession();
       session = result.data.session;
       error = result.error;
-      
+
       if (session || error) {
         break;
       }
-      
+
       // Wait before retrying (exponential backoff)
       if (attempt < 2) {
         await new Promise((resolve) => setTimeout(resolve, 100 * (attempt + 1)));
       }
     }
-    
+
     if (error) {
       console.error('Error getting session:', error);
       return null;
     }
-    
+
     // If still no session after retries, return null
     if (!session) {
       return null;
     }
-    
+
     // Check if token is expired or about to expire (within 60 seconds)
     const expiresAt = session.expires_at;
     if (expiresAt) {
       const expiresIn = expiresAt - Math.floor(Date.now() / 1000);
-      
+
       // If token is expired or expires soon, try to refresh it
       if (expiresIn < 60) {
         try {
@@ -57,7 +57,7 @@ const getAuthToken = async (retryCount = 0): Promise<string | null> => {
             data: { session: refreshedSession },
             error: refreshError,
           } = await supabase.auth.refreshSession();
-          
+
           if (!refreshError && refreshedSession?.access_token) {
             return refreshedSession.access_token;
           } else if (refreshError) {
@@ -80,7 +80,7 @@ const getAuthToken = async (retryCount = 0): Promise<string | null> => {
         }
       }
     }
-    
+
     return session.access_token || null;
   } catch (error) {
     console.error('Error in getAuthToken:', error);
@@ -185,4 +185,3 @@ export const circlesApi = {
     return apiResponse.json();
   },
 };
-
