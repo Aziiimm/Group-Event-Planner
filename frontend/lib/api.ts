@@ -1,4 +1,5 @@
 import Constants from 'expo-constants';
+import { supabase } from './supabase';
 
 // Get API URL from environment or use default
 const getApiUrl = () => {
@@ -11,9 +12,9 @@ const getApiUrl = () => {
 
 // Get auth token from Supabase session
 // Ensures we get a fresh session, especially after logout/login
+// Get auth token from Supabase session
+// Ensures we get a fresh session, especially after logout/login
 const getAuthToken = async (retryCount = 0): Promise<string | null> => {
-  const { supabase } = await import('./supabase');
-
   try {
     // Get the current session - getSession() reads from storage
     // We'll try up to 3 times with increasing delays to handle race conditions
