@@ -74,6 +74,32 @@ export default function EventDetailScreen() {
     }, [id, userRsvp]),
   );
 
+  const handleDeleteExpense = async (expenseId: string, expenseTitle: string) => {
+    Alert.alert(
+      'Delete Expense',
+      `Are you sure you want to delete "${expenseTitle}"? This action cannot be undone.`,
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await expensesApi.deleteExpense(expenseId);
+              Alert.alert('Success', 'Expense deleted successfully');
+              fetchExpenses();
+            } catch (error: any) {
+              Alert.alert('Error', error.message || 'Failed to delete expense');
+            }
+          },
+        },
+      ],
+    );
+  };
+
   const fetchEventData = async () => {
     if (!id) return;
 
@@ -480,11 +506,9 @@ export default function EventDetailScreen() {
               <View className="space-y-3">
                 {expenses.map((expense: any) => {
                   const paidByUser = rsvps.find((r) => r.user_id === expense.paid_by)?.user;
+                  const canEdit = expense.paid_by === user?.id;
                   return (
-                    <TouchableOpacity
-                      key={expense.id}
-                      className="rounded-xl bg-white p-4 shadow-sm"
-                    >
+                    <View key={expense.id} className="rounded-xl bg-white p-4 shadow-sm">
                       <View className="flex-row items-start justify-between">
                         <View className="flex-1">
                           <Text className="text-base font-semibold text-gray-900">
@@ -534,8 +558,28 @@ export default function EventDetailScreen() {
                             </View>
                           )}
                         </View>
+                        {canEdit && (
+                          <View className="ml-3 flex-row gap-2">
+                            <TouchableOpacity
+                              onPress={() =>
+                                router.push(
+                                  `/expenses/edit?expenseId=${expense.id}&eventId=${id}` as any,
+                                )
+                              }
+                              className="h-8 w-8 items-center justify-center rounded-lg bg-blue-100"
+                            >
+                              <MaterialIcons name="edit" size={18} color="#2563EB" />
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                              onPress={() => handleDeleteExpense(expense.id, expense.title)}
+                              className="h-8 w-8 items-center justify-center rounded-lg bg-red-100"
+                            >
+                              <MaterialIcons name="delete" size={18} color="#DC2626" />
+                            </TouchableOpacity>
+                          </View>
+                        )}
                       </View>
-                    </TouchableOpacity>
+                    </View>
                   );
                 })}
               </View>
