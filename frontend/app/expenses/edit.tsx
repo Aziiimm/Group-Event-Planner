@@ -3,14 +3,7 @@ import { useEffect, useState } from 'react';
 import { router, useLocalSearchParams } from 'expo-router';
 
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import {
-  Alert,
-  ScrollView,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { Alert, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/hooks/use-auth';
@@ -39,9 +32,7 @@ export default function EditExpenseScreen() {
   const [amount, setAmount] = useState('');
   const [splitType, setSplitType] = useState<SplitType>('equal');
   const [selectedAttendees, setSelectedAttendees] = useState<string[]>([]);
-  const [customSplits, setCustomSplits] = useState<
-    { user_id: string; amount_owed: string }[]
-  >([]);
+  const [customSplits, setCustomSplits] = useState<{ user_id: string; amount_owed: string }[]>([]);
   const [description, setDescription] = useState('');
   const [loading, setLoading] = useState(false);
   const [loadingExpense, setLoadingExpense] = useState(true);
@@ -71,9 +62,7 @@ export default function EditExpenseScreen() {
     try {
       const rsvpsData = await eventsApi.getEventRSVPs(eventId);
       // Filter to only "going" RSVPs
-      const goingRsvps = (rsvpsData || []).filter(
-        (rsvp: EventRSVP) => rsvp.status === 'going',
-      );
+      const goingRsvps = (rsvpsData || []).filter((rsvp: EventRSVP) => rsvp.status === 'going');
       setRsvps(goingRsvps);
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Failed to load event attendees');
@@ -125,10 +114,7 @@ export default function EditExpenseScreen() {
       setSelectedAttendees([...selectedAttendees, userId]);
       // Add to custom splits if needed
       if (splitType === 'custom' || splitType === 'individual') {
-        setCustomSplits([
-          ...customSplits,
-          { user_id: userId, amount_owed: '' },
-        ]);
+        setCustomSplits([...customSplits, { user_id: userId, amount_owed: '' }]);
       }
     }
   };
@@ -165,14 +151,8 @@ export default function EditExpenseScreen() {
       return;
     }
 
-    if (
-      (splitType === 'custom' || splitType === 'individual') &&
-      customSplits.length === 0
-    ) {
-      Alert.alert(
-        'Validation Error',
-        'Please enter split amounts for all selected attendees',
-      );
+    if ((splitType === 'custom' || splitType === 'individual') && customSplits.length === 0) {
+      Alert.alert('Validation Error', 'Please enter split amounts for all selected attendees');
       return;
     }
 
@@ -243,9 +223,7 @@ export default function EditExpenseScreen() {
           >
             <MaterialIcons name="arrow-back" size={24} color="#FFFFFF" />
           </TouchableOpacity>
-          <Text className="flex-1 text-2xl font-bold text-white">
-            Edit Expense
-          </Text>
+          <Text className="flex-1 text-2xl font-bold text-white">Edit Expense</Text>
         </View>
       </View>
 
@@ -254,9 +232,7 @@ export default function EditExpenseScreen() {
         <View className="px-6 pt-6">
           {/* Expense Title */}
           <View className="mb-6">
-            <Text className="mb-2 text-base font-semibold text-gray-700">
-              Expense Title *
-            </Text>
+            <Text className="mb-2 text-base font-semibold text-gray-700">Expense Title *</Text>
             <TextInput
               value={title}
               onChangeText={setTitle}
@@ -269,13 +245,9 @@ export default function EditExpenseScreen() {
 
           {/* Amount */}
           <View className="mb-6">
-            <Text className="mb-2 text-base font-semibold text-gray-700">
-              Amount *
-            </Text>
+            <Text className="mb-2 text-base font-semibold text-gray-700">Amount *</Text>
             <View className="flex-row items-center">
-              <Text className="absolute left-4 z-10 text-base text-gray-500">
-                $
-              </Text>
+              <Text className="absolute left-4 z-10 text-base text-gray-500">$</Text>
               <TextInput
                 value={amount}
                 onChangeText={(text) => {
@@ -299,18 +271,14 @@ export default function EditExpenseScreen() {
 
           {/* Split Type */}
           <View className="mb-6">
-            <Text className="mb-2 text-base font-semibold text-gray-700">
-              Split Type *
-            </Text>
+            <Text className="mb-2 text-base font-semibold text-gray-700">Split Type *</Text>
             <View className="flex-row space-x-3">
               {(['equal', 'individual', 'custom'] as SplitType[]).map((type) => (
                 <TouchableOpacity
                   key={type}
                   onPress={() => setSplitType(type)}
                   className={`flex-1 rounded-xl border-2 px-4 py-3 ${
-                    splitType === type
-                      ? 'border-blue-600 bg-blue-50'
-                      : 'border-gray-300 bg-white'
+                    splitType === type ? 'border-blue-600 bg-blue-50' : 'border-gray-300 bg-white'
                   }`}
                 >
                   <Text
@@ -327,9 +295,7 @@ export default function EditExpenseScreen() {
 
           {/* Attendees Selection */}
           <View className="mb-6">
-            <Text className="mb-2 text-base font-semibold text-gray-700">
-              Select Attendees *
-            </Text>
+            <Text className="mb-2 text-base font-semibold text-gray-700">Select Attendees *</Text>
             <View className="space-y-2">
               {goingRsvps.map((rsvp) => {
                 const isSelected = selectedAttendees.includes(rsvp.user_id);
@@ -338,21 +304,15 @@ export default function EditExpenseScreen() {
                     key={rsvp.id}
                     onPress={() => toggleAttendee(rsvp.user_id)}
                     className={`flex-row items-center rounded-xl border-2 px-4 py-3 ${
-                      isSelected
-                        ? 'border-blue-600 bg-blue-50'
-                        : 'border-gray-300 bg-white'
+                      isSelected ? 'border-blue-600 bg-blue-50' : 'border-gray-300 bg-white'
                     }`}
                   >
                     <View
                       className={`mr-3 h-5 w-5 items-center justify-center rounded border-2 ${
-                        isSelected
-                          ? 'border-blue-600 bg-blue-600'
-                          : 'border-gray-300'
+                        isSelected ? 'border-blue-600 bg-blue-600' : 'border-gray-300'
                       }`}
                     >
-                      {isSelected && (
-                        <MaterialIcons name="check" size={16} color="#FFFFFF" />
-                      )}
+                      {isSelected && <MaterialIcons name="check" size={16} color="#FFFFFF" />}
                     </View>
                     <Text
                       className={`flex-1 text-base ${
@@ -372,9 +332,7 @@ export default function EditExpenseScreen() {
             selectedAttendees.length > 0 && (
               <View className="mb-6">
                 <Text className="mb-2 text-base font-semibold text-gray-700">
-                  {splitType === 'custom'
-                    ? 'Custom Split Amounts *'
-                    : 'Individual Amounts *'}
+                  {splitType === 'custom' ? 'Custom Split Amounts *' : 'Individual Amounts *'}
                 </Text>
                 <View className="space-y-3">
                   {customSplits.map((split) => {
@@ -382,13 +340,9 @@ export default function EditExpenseScreen() {
                     if (!rsvp) return null;
                     return (
                       <View key={split.user_id} className="space-y-1">
-                        <Text className="text-sm text-gray-600">
-                          {getDisplayName(rsvp)}
-                        </Text>
+                        <Text className="text-sm text-gray-600">{getDisplayName(rsvp)}</Text>
                         <View className="flex-row items-center">
-                          <Text className="absolute left-4 z-10 text-base text-gray-500">
-                            $
-                          </Text>
+                          <Text className="absolute left-4 z-10 text-base text-gray-500">$</Text>
                           <TextInput
                             value={split.amount_owed}
                             onChangeText={(text) => {
@@ -416,10 +370,7 @@ export default function EditExpenseScreen() {
                 <Text className="mt-2 text-xs text-gray-500">
                   Total: $
                   {customSplits
-                    .reduce(
-                      (sum, split) => sum + (parseFloat(split.amount_owed) || 0),
-                      0,
-                    )
+                    .reduce((sum, split) => sum + (parseFloat(split.amount_owed) || 0), 0)
                     .toFixed(2)}{' '}
                   / ${parseFloat(amount) || 0}
                 </Text>
@@ -448,9 +399,7 @@ export default function EditExpenseScreen() {
           <TouchableOpacity
             onPress={handleSubmit}
             disabled={loading}
-            className={`mb-8 rounded-xl px-6 py-4 ${
-              loading ? 'bg-gray-400' : 'bg-blue-600'
-            }`}
+            className={`mb-8 rounded-xl px-6 py-4 ${loading ? 'bg-gray-400' : 'bg-blue-600'}`}
           >
             <Text className="text-center text-base font-semibold text-white">
               {loading ? 'Updating...' : 'Update Expense'}
@@ -461,4 +410,3 @@ export default function EditExpenseScreen() {
     </View>
   );
 }
-
