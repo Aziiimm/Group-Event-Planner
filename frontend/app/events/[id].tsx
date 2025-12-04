@@ -1,14 +1,14 @@
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 import { LinearGradient } from 'expo-linear-gradient';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { ActivityIndicator, Alert, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/hooks/use-auth';
-import { eventsApi } from '@/lib/api';
+import { eventsApi, expensesApi } from '@/lib/api';
 
 interface EventHost {
   id: string;
@@ -52,8 +52,11 @@ export default function EventDetailScreen() {
 
   const [event, setEvent] = useState<Event | null>(null);
   const [rsvps, setRsvps] = useState<EventRSVP[]>([]);
+  const [expenses, setExpenses] = useState<any[]>([]);
+  const [expenseSummary, setExpenseSummary] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [rsvpLoading, setRsvpLoading] = useState(false);
+  const [expensesLoading, setExpensesLoading] = useState(false);
   const [userRsvp, setUserRsvp] = useState<'going' | 'not_going' | null>(null);
 
   useEffect(() => {
@@ -61,6 +64,15 @@ export default function EventDetailScreen() {
       fetchEventData();
     }
   }, [id]);
+
+  // Refresh expenses when screen comes into focus (e.g., after creating an expense)
+  useFocusEffect(
+    React.useCallback(() => {
+      if (id && userRsvp === 'going') {
+        fetchExpenses();
+      }
+    }, [id, userRsvp]),
+  );
 
   const fetchEventData = async () => {
     if (!id) return;
@@ -78,11 +90,35 @@ export default function EventDetailScreen() {
       // Find user's RSVP
       const userRsvpData = (rsvpsData || []).find((rsvp: EventRSVP) => rsvp.user_id === user?.id);
       setUserRsvp(userRsvpData?.status || null);
+
+      // Fetch expenses if user is going
+      if (userRsvpData?.status === 'going') {
+        fetchExpenses();
+      }
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Failed to load event data');
       router.back();
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchExpenses = async () => {
+    if (!id) return;
+
+    try {
+      setExpensesLoading(true);
+      const [expensesData, summaryData] = await Promise.all([
+        expensesApi.getEventExpenses(id).catch(() => []),
+        expensesApi.getExpenseSummary(id).catch(() => null),
+      ]);
+
+      setExpenses(expensesData || []);
+      setExpenseSummary(summaryData);
+    } catch (error: any) {
+      console.error('Error fetching expenses:', error);
+    } finally {
+      setExpensesLoading(false);
     }
   };
 
@@ -96,6 +132,13 @@ export default function EventDetailScreen() {
       // Refresh RSVPs
       const rsvpsData = await eventsApi.getEventRSVPs(id);
       setRsvps(rsvpsData || []);
+      // Fetch expenses if user is now going
+      if (status === 'going') {
+        fetchExpenses();
+      } else {
+        setExpenses([]);
+        setExpenseSummary(null);
+      }
       Alert.alert(
         'Success',
         `You've marked yourself as ${status === 'going' ? 'going' : 'not going'}`,
@@ -385,11 +428,124 @@ export default function EventDetailScreen() {
                 <Text className="ml-1 text-sm font-semibold text-white">Add Expense</Text>
               </TouchableOpacity>
             </View>
-            <View className="rounded-xl bg-white p-4 shadow-sm">
-              <Text className="text-center text-gray-500">
-                No expenses yet. Tap "Add Expense" to get started.
-              </Text>
-            </View>
+
+            {/* Expense Summary */}
+            {expenseSummary && expenseSummary.total_expenses > 0 && (
+              <View className="mb-4 rounded-xl bg-gradient-to-r from-blue-50 to-indigo-50 p-4">
+                <Text className="mb-2 text-sm font-semibold text-gray-700">Total Expenses</Text>
+                <Text className="text-2xl font-bold text-gray-900">
+                  ${expenseSummary.total_expenses.toFixed(2)}
+                </Text>
+                {expenseSummary.balances && expenseSummary.balances.length > 0 && (
+                  <View className="mt-3">
+                    <Text className="mb-2 text-xs font-semibold text-gray-600">Balances</Text>
+                    {expenseSummary.balances.map((balance: any) => {
+                      const balanceUser = rsvps.find((r) => r.user_id === balance.user_id)?.user;
+                      if (!balanceUser) return null;
+                      return (
+                        <View key={balance.user_id} className="mb-1 flex-row justify-between">
+                          <Text className="text-sm text-gray-700">
+                            {balanceUser.display_name ||
+                              `${balanceUser.first_name} ${balanceUser.last_name}`}
+                          </Text>
+                          <Text
+                            className={`text-sm font-semibold ${
+                              balance.net > 0
+                                ? 'text-green-600'
+                                : balance.net < 0
+                                  ? 'text-red-600'
+                                  : 'text-gray-600'
+                            }`}
+                          >
+                            {balance.net > 0
+                              ? `+$${balance.net.toFixed(2)}`
+                              : balance.net < 0
+                                ? `-$${Math.abs(balance.net).toFixed(2)}`
+                                : '$0.00'}
+                          </Text>
+                        </View>
+                      );
+                    })}
+                  </View>
+                )}
+              </View>
+            )}
+
+            {/* Expenses List */}
+            {expensesLoading ? (
+              <View className="rounded-xl bg-white p-8 shadow-sm">
+                <ActivityIndicator size="small" color="#3B82F6" />
+              </View>
+            ) : expenses.length > 0 ? (
+              <View className="space-y-3">
+                {expenses.map((expense: any) => {
+                  const paidByUser = rsvps.find((r) => r.user_id === expense.paid_by)?.user;
+                  return (
+                    <TouchableOpacity
+                      key={expense.id}
+                      className="rounded-xl bg-white p-4 shadow-sm"
+                    >
+                      <View className="flex-row items-start justify-between">
+                        <View className="flex-1">
+                          <Text className="text-base font-semibold text-gray-900">
+                            {expense.title}
+                          </Text>
+                          {expense.description && (
+                            <Text className="mt-1 text-sm text-gray-600">
+                              {expense.description}
+                            </Text>
+                          )}
+                          <View className="mt-2 flex-row items-center">
+                            <Text className="text-sm text-gray-500">
+                              Paid by:{' '}
+                              {paidByUser?.display_name ||
+                                `${paidByUser?.first_name} ${paidByUser?.last_name}`}
+                            </Text>
+                            <Text className="mx-2 text-gray-400">•</Text>
+                            <Text className="text-sm font-semibold text-gray-900">
+                              ${expense.amount.toFixed(2)}
+                            </Text>
+                          </View>
+                          {expense.splits && expense.splits.length > 0 && (
+                            <View className="mt-2">
+                              <Text className="mb-1 text-xs font-semibold text-gray-500">
+                                Split among {expense.splits.length} person
+                                {expense.splits.length > 1 ? 's' : ''}:
+                              </Text>
+                              {expense.splits.slice(0, 3).map((split: any) => {
+                                const splitUser = rsvps.find(
+                                  (r) => r.user_id === split.user_id,
+                                )?.user;
+                                if (!splitUser) return null;
+                                return (
+                                  <Text key={split.id} className="text-xs text-gray-600">
+                                    •{' '}
+                                    {splitUser.display_name ||
+                                      `${splitUser.first_name} ${splitUser.last_name}`}
+                                    : ${split.amount_owed.toFixed(2)}
+                                  </Text>
+                                );
+                              })}
+                              {expense.splits.length > 3 && (
+                                <Text className="text-xs text-gray-500">
+                                  +{expense.splits.length - 3} more
+                                </Text>
+                              )}
+                            </View>
+                          )}
+                        </View>
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            ) : (
+              <View className="rounded-xl bg-white p-4 shadow-sm">
+                <Text className="text-center text-gray-500">
+                  No expenses yet. Tap "Add Expense" to get started.
+                </Text>
+              </View>
+            )}
           </View>
         )}
       </ScrollView>
