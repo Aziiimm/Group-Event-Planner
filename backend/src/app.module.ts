@@ -7,6 +7,7 @@ import { SupabaseModule } from './supabase/supabase.module';
 import { AuthModule } from './auth/auth.module';
 import { CirclesModule } from './circles/circles.module';
 import { EventsModule } from './events/events.module';
+import { ExpensesModule } from './expenses/expenses.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { EventsModule } from './events/events.module';
     HealthModule,
     CirclesModule,
     EventsModule,
+    ExpensesModule,
   ],
   controllers: [AppController],
   providers: [AppService],
