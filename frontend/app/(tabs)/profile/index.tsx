@@ -43,8 +43,8 @@ export default function ProfileScreen() {
       // Fetch events count - get all events from all user's circles
       let eventsCount = 0;
       if (circlesCount > 0) {
-        const eventsPromises = circles.map((circle: { id: string }) =>
-          eventsApi.getCircleEvents(circle.id).catch(() => []), // Don't fail if one circle's events fail
+        const eventsPromises = circles.map(
+          (circle: { id: string }) => eventsApi.getCircleEvents(circle.id).catch(() => []), // Don't fail if one circle's events fail
         );
         const eventsArrays = await Promise.all(eventsPromises);
         const allEvents = eventsArrays.flat();
@@ -56,13 +56,13 @@ export default function ProfileScreen() {
       try {
         // Get all circle IDs the user is a member of
         const circleIds = circles.map((circle: { id: string }) => circle.id);
-        
+
         if (circleIds.length > 0) {
           const { count, error } = await supabase
             .from('photos')
             .select('*', { count: 'exact', head: true })
             .in('circle_id', circleIds);
-          
+
           if (!error && count !== null) {
             photosCount = count;
           }
