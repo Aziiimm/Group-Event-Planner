@@ -55,7 +55,7 @@ export default function ProfileScreen() {
       let photosCount = 0;
       try {
         // Get all circle IDs the user is a member of
-        const circleIds = circles.map((circle: { id: string }) => circle.id);
+        const circleIds = (circles || []).map((circle: { id: string }) => circle.id);
 
         if (circleIds.length > 0) {
           const { count, error } = await supabase

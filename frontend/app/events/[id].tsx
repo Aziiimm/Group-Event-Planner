@@ -371,6 +371,27 @@ export default function EventDetailScreen() {
             </View>
           )}
         </View>
+
+        {/* Expenses Section */}
+        {userRsvp === 'going' && (
+          <View className="px-6 pt-6">
+            <View className="mb-4 flex-row items-center justify-between">
+              <Text className="text-xl font-bold text-gray-900">Expenses</Text>
+              <TouchableOpacity
+                onPress={() => router.push(`/expenses/create?eventId=${id}` as any)}
+                className="flex-row items-center rounded-lg bg-blue-600 px-4 py-2"
+              >
+                <MaterialIcons name="add" size={20} color="#FFFFFF" />
+                <Text className="ml-1 text-sm font-semibold text-white">Add Expense</Text>
+              </TouchableOpacity>
+            </View>
+            <View className="rounded-xl bg-white p-4 shadow-sm">
+              <Text className="text-center text-gray-500">
+                No expenses yet. Tap "Add Expense" to get started.
+              </Text>
+            </View>
+          </View>
+        )}
       </ScrollView>
     </View>
   );

@@ -102,6 +102,16 @@ export class ExpensesService {
             `Custom splits must sum to ${amount}, got ${total}`,
           );
         }
+        // Validate all attendee_ids are in custom_splits
+        const individualUserIds = customSplits.map((s) => s.user_id);
+        const missingIndividualUsers = attendeeIds.filter(
+          (id) => !individualUserIds.includes(id),
+        );
+        if (missingIndividualUsers.length > 0) {
+          throw new BadRequestException(
+            `All selected attendees must have a split amount. Missing: ${missingIndividualUsers.join(', ')}`,
+          );
+        }
         return customSplits;
 
       case SplitType.CUSTOM:
@@ -569,7 +579,6 @@ export class ExpensesService {
       }
       const payerBalance = userBalances.get(payerId)!;
       payerBalance.paid += expense.amount;
-      payerBalance.net += expense.amount;
 
       // Track what each person owes
       expense.splits.forEach((split: any) => {
@@ -579,13 +588,12 @@ export class ExpensesService {
         }
         const userBalance = userBalances.get(splitUserId)!;
         userBalance.owed += split.amount_owed;
-        userBalance.net -= split.amount_owed;
-
-        // If the person who owes is also the payer, adjust net
-        if (splitUserId === payerId) {
-          userBalance.net += split.amount_owed;
-        }
       });
+    });
+
+    // Calculate net balances: net = paid - owed
+    userBalances.forEach((balance, userId) => {
+      balance.net = balance.paid - balance.owed;
     });
 
     // Convert map to array

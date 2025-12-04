@@ -233,3 +233,72 @@ export const eventsApi = {
     return response.json();
   },
 };
+
+// Expenses API
+export const expensesApi = {
+  // Create an expense for an event
+  createExpense: async (
+    eventId: string,
+    expenseData: {
+      title: string;
+      amount: number;
+      paid_by: string;
+      split_type: 'equal' | 'individual' | 'custom';
+      attendee_ids: string[];
+      custom_splits?: { user_id: string; amount_owed: number }[];
+      description?: string;
+    },
+  ) => {
+    const response = await apiRequest(`/expenses/event/${eventId}`, {
+      method: 'POST',
+      body: JSON.stringify(expenseData),
+    });
+    return response.json();
+  },
+
+  // Get all expenses for an event
+  getEventExpenses: async (eventId: string) => {
+    const response = await apiRequest(`/expenses/event/${eventId}`);
+    return response.json();
+  },
+
+  // Get expense summary for an event
+  getExpenseSummary: async (eventId: string) => {
+    const response = await apiRequest(`/expenses/event/${eventId}/summary`);
+    return response.json();
+  },
+
+  // Get single expense details
+  getExpense: async (expenseId: string) => {
+    const response = await apiRequest(`/expenses/${expenseId}`);
+    return response.json();
+  },
+
+  // Update an expense
+  updateExpense: async (
+    expenseId: string,
+    updateData: {
+      title?: string;
+      amount?: number;
+      paid_by?: string;
+      split_type?: 'equal' | 'individual' | 'custom';
+      attendee_ids?: string[];
+      custom_splits?: { user_id: string; amount_owed: number }[];
+      description?: string;
+    },
+  ) => {
+    const response = await apiRequest(`/expenses/${expenseId}`, {
+      method: 'PUT',
+      body: JSON.stringify(updateData),
+    });
+    return response.json();
+  },
+
+  // Delete an expense
+  deleteExpense: async (expenseId: string) => {
+    const response = await apiRequest(`/expenses/${expenseId}`, {
+      method: 'DELETE',
+    });
+    return response.json();
+  },
+};
