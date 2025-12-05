@@ -8,6 +8,7 @@ import { AuthModule } from './auth/auth.module';
 import { CirclesModule } from './circles/circles.module';
 import { EventsModule } from './events/events.module';
 import { ExpensesModule } from './expenses/expenses.module';
+import { AvailabilityModule } from './availability/availability.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { ExpensesModule } from './expenses/expenses.module';
     CirclesModule,
     EventsModule,
     ExpensesModule,
+    AvailabilityModule,
   ],
   controllers: [AppController],
   providers: [AppService],
