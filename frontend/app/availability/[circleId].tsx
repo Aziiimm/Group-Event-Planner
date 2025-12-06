@@ -7,8 +7,10 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import {
   ActivityIndicator,
   Alert,
+  Modal,
   ScrollView,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -20,9 +22,16 @@ import { availabilityApi } from '@/lib/api';
 
 interface AvailabilityBlock {
   id: string;
+  user_id: string;
   date: string;
   hour_block: number;
   is_available: boolean;
+  user?: {
+    id: string;
+    display_name: string;
+    first_name: string | null;
+    last_name: string | null;
+  } | null;
 }
 
 export default function AvailabilityManagementScreen() {
@@ -33,15 +42,27 @@ export default function AvailabilityManagementScreen() {
 
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  // Get today's date in YYYY-MM-DD format
+  // Get today's date in YYYY-MM-DD format (local timezone)
   const getTodayDate = () => {
-    return new Date().toISOString().split('T')[0];
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   };
 
   const [selectedDate, setSelectedDate] = useState<string>(getTodayDate());
   const [selectedHourBlocks, setSelectedHourBlocks] = useState<Set<number>>(new Set());
   const [availabilityData, setAvailabilityData] = useState<AvailabilityBlock[]>([]);
   const [markedDates, setMarkedDates] = useState<Record<string, any>>({});
+  const [showBulkSetModal, setShowBulkSetModal] = useState(false);
+  const [bulkStartDate, setBulkStartDate] = useState<string>(getTodayDate());
+  const [bulkEndDate, setBulkEndDate] = useState<string>('');
+  const [bulkDayFilter, setBulkDayFilter] = useState<
+    'all' | 'weekdays' | 'weekends' | 'custom'
+  >('all');
+  const [selectedDaysOfWeek, setSelectedDaysOfWeek] = useState<Set<number>>(new Set());
+  const [bulkDatePickerMode, setBulkDatePickerMode] = useState<'start' | 'end' | null>(null);
 
   // Fetch existing availability for the current month
   const fetchAvailability = useCallback(async () => {
@@ -122,12 +143,13 @@ export default function AvailabilityManagementScreen() {
   const handleSave = async () => {
     if (!circleId || !selectedDate) return;
 
-    // Prevent saving availability for past dates
+    // Prevent saving availability for past dates (allow today and future dates)
     const today = getTodayDate();
     if (selectedDate < today) {
       Alert.alert('Invalid Date', 'You cannot modify availability for past dates.');
       return;
     }
+    // Today and future dates are allowed
 
     try {
       setSaving(true);
@@ -203,79 +225,173 @@ export default function AvailabilityManagementScreen() {
     }
   };
 
-  const handleBulkSet = async () => {
+  const handleBulkSetOpen = () => {
     if (selectedHourBlocks.size === 0) {
       Alert.alert('Error', 'Please select at least one time block first');
       return;
     }
 
-    if (!circleId) return;
+    if (!circleId || !selectedDate) return;
 
-    Alert.alert(
-      'Bulk Set Availability',
-      'This will replace all availability for the rest of the current month (today onwards) with the selected hours. Continue?',
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-        {
-          text: 'Replace for Month',
-          onPress: async () => {
-            try {
-              setSaving(true);
-              const today = getTodayDate();
-              const now = new Date();
-              const year = now.getFullYear();
-              const month = now.getMonth();
-              // Start from today, end at last day of current month
-              const startDate = today;
-              const endDate = new Date(year, month + 1, 0).toISOString().split('T')[0];
+    // Initialize bulk set with selected date as start
+    const today = getTodayDate();
+    const startDate = selectedDate < today ? today : selectedDate;
+    setBulkStartDate(startDate);
 
-              // First, get all existing availability for the date range
-              const existingData = await availabilityApi.getCircleAvailability(
-                circleId,
-                startDate,
-                endDate,
-              );
+    // Set end date to end of current month by default
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth();
+    const defaultEndDate = new Date(year, month + 1, 0).toISOString().split('T')[0];
+    setBulkEndDate(defaultEndDate);
 
-              // Filter to only current user's availability
-              const userAvailability = (existingData || []).filter(
-                (item: any) => item.user?.id === user?.id || item.user_id === user?.id,
-              );
-
-              // Delete all existing availability for the date range (to replace, not add)
-              for (const block of userAvailability) {
-                try {
-                  await availabilityApi.deleteAvailabilityBlock(block.id);
-                } catch (error) {
-                  // Continue even if delete fails
-                }
-              }
-
-              // Now set the new availability for the date range
-              await availabilityApi.setAvailability(circleId, {
-                start_date: startDate,
-                end_date: endDate,
-                hour_blocks: Array.from(selectedHourBlocks),
-                is_available: true,
-              });
-
-              Alert.alert(
-                'Success',
-                `Availability replaced for ${new Date(startDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric' })} through ${new Date(endDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}`,
-              );
-              await fetchAvailability();
-            } catch (error: any) {
-              Alert.alert('Error', error.message || 'Failed to set availability');
-            } finally {
-              setSaving(false);
-            }
-          },
-        },
-      ],
-    );
+    setBulkDayFilter('all');
+    setSelectedDaysOfWeek(new Set());
+    setShowBulkSetModal(true);
   };
+
+  const getDayOfWeek = (dateString: string): number => {
+    // Parse date string (YYYY-MM-DD) and create date in local timezone
+    const [year, month, day] = dateString.split('-').map(Number);
+    const date = new Date(year, month - 1, day); // month is 0-indexed
+    return date.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+  };
+
+  const shouldIncludeDate = (dateString: string): boolean => {
+    if (bulkDayFilter === 'all') {
+      return true;
+    }
+
+    const dayOfWeek = getDayOfWeek(dateString);
+
+    if (bulkDayFilter === 'weekdays') {
+      // Monday (1) through Friday (5)
+      return dayOfWeek >= 1 && dayOfWeek <= 5;
+    }
+
+    if (bulkDayFilter === 'weekends') {
+      // Sunday (0) and Saturday (6)
+      return dayOfWeek === 0 || dayOfWeek === 6;
+    }
+
+    if (bulkDayFilter === 'custom') {
+      return selectedDaysOfWeek.has(dayOfWeek);
+    }
+
+    return true;
+  };
+
+  const handleBulkSetConfirm = async () => {
+    if (!circleId || !bulkStartDate || !bulkEndDate) {
+      Alert.alert('Error', 'Please select both start and end dates');
+      return;
+    }
+
+    const today = getTodayDate();
+    if (bulkStartDate < today) {
+      Alert.alert('Error', 'Start date cannot be in the past');
+      return;
+    }
+
+    if (bulkStartDate > bulkEndDate) {
+      Alert.alert('Error', 'Start date must be before or equal to end date');
+      return;
+    }
+
+    if (bulkDayFilter === 'custom' && selectedDaysOfWeek.size === 0) {
+      Alert.alert('Error', 'Please select at least one day of the week');
+      return;
+    }
+
+    try {
+      setSaving(true);
+      setShowBulkSetModal(false);
+
+      // Generate list of dates to apply availability to
+      const datesToApply: string[] = [];
+      const today = getTodayDate();
+      
+      // Parse dates in local timezone to avoid timezone issues
+      const [startYear, startMonth, startDay] = bulkStartDate.split('-').map(Number);
+      const [endYear, endMonth, endDay] = bulkEndDate.split('-').map(Number);
+      const startDate = new Date(startYear, startMonth - 1, startDay);
+      const endDate = new Date(endYear, endMonth - 1, endDay);
+      const currentDate = new Date(startDate);
+
+      while (currentDate <= endDate) {
+        // Format date as YYYY-MM-DD in local timezone
+        const year = currentDate.getFullYear();
+        const month = String(currentDate.getMonth() + 1).padStart(2, '0');
+        const day = String(currentDate.getDate()).padStart(2, '0');
+        const dateStr = `${year}-${month}-${day}`;
+        
+        // Only include dates that match the filter and are not in the past
+        if (dateStr >= today && shouldIncludeDate(dateStr)) {
+          datesToApply.push(dateStr);
+        }
+        currentDate.setDate(currentDate.getDate() + 1);
+      }
+
+      if (datesToApply.length === 0) {
+        Alert.alert('Error', 'No valid dates found in the selected range');
+        setSaving(false);
+        return;
+      }
+
+      // First, get all existing availability for the date range
+      const existingData = await availabilityApi.getCircleAvailability(
+        circleId,
+        bulkStartDate,
+        bulkEndDate,
+      );
+
+      // Filter to only current user's availability and dates we're applying to
+      const userAvailability = (existingData || [])
+        .filter((item: any) => item.user?.id === user?.id || item.user_id === user?.id)
+        .filter((item: any) => datesToApply.includes(item.date));
+
+      // Delete all existing availability for the dates we're applying to (to replace, not add)
+      for (const block of userAvailability) {
+        try {
+          await availabilityApi.deleteAvailabilityBlock(block.id);
+        } catch (error) {
+          // Continue even if delete fails
+        }
+      }
+
+      // Apply availability to each date individually
+      for (const dateStr of datesToApply) {
+        await availabilityApi.setAvailability(circleId, {
+          start_date: dateStr,
+          end_date: dateStr,
+          hour_blocks: Array.from(selectedHourBlocks),
+          is_available: true,
+        });
+      }
+
+      Alert.alert(
+        'Success',
+        `Availability replaced for ${datesToApply.length} day(s) from ${new Date(bulkStartDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} through ${new Date(bulkEndDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`,
+      );
+      await fetchAvailability();
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to set availability');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const toggleDayOfWeek = (day: number) => {
+    const newSet = new Set(selectedDaysOfWeek);
+    if (newSet.has(day)) {
+      newSet.delete(day);
+    } else {
+      newSet.add(day);
+    }
+    setSelectedDaysOfWeek(newSet);
+  };
+
+  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
   if (loading) {
     return (
@@ -417,7 +533,7 @@ export default function AvailabilityManagementScreen() {
               </TouchableOpacity>
 
               <TouchableOpacity
-                onPress={handleBulkSet}
+                onPress={handleBulkSetOpen}
                 disabled={saving || selectedHourBlocks.size === 0}
                 className="flex-1 flex-row items-center justify-center rounded-xl border-2 border-blue-600 bg-white py-3"
                 style={{ opacity: saving || selectedHourBlocks.size === 0 ? 0.6 : 1 }}
@@ -439,12 +555,248 @@ export default function AvailabilityManagementScreen() {
                 • Select hours to mark yourself as available{'\n'}
                 • Deselect all hours and save to remove availability for a date{'\n'}
                 • Use "Save Day" to update the selected date{'\n'}
-                • Use "Bulk Set" to apply selected hours to a date range
+                • Use "Bulk Set" to apply selected hours to a custom date range with day filters
               </Text>
             </View>
           </View>
         </View>
       </ScrollView>
+
+      {/* Bulk Set Modal */}
+      <Modal
+        visible={showBulkSetModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowBulkSetModal(false)}
+      >
+        <View className="flex-1 bg-black/50">
+          <View
+            className="absolute bottom-0 w-full rounded-t-3xl bg-white pb-6"
+            style={{ paddingBottom: Math.max(insets.bottom, 24) }}
+          >
+            <ScrollView className="max-h-[80%]">
+              {/* Modal Header */}
+              <View className="flex-row items-center justify-between border-b border-gray-200 px-6 py-4">
+                <TouchableOpacity onPress={() => setShowBulkSetModal(false)}>
+                  <Text className="text-base font-medium text-gray-600">Cancel</Text>
+                </TouchableOpacity>
+                <Text className="text-lg font-semibold text-gray-900">Bulk Set Availability</Text>
+                <TouchableOpacity onPress={handleBulkSetConfirm} disabled={saving}>
+                  <Text
+                    className="text-base font-semibold text-blue-600"
+                    style={{ opacity: saving ? 0.6 : 1 }}
+                  >
+                    Apply
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              <View className="px-6 py-4">
+                {/* Date Range Section */}
+                <View className="mb-6">
+                  <Text className="mb-3 text-base font-semibold text-gray-900">Date Range</Text>
+
+                  {/* Start Date */}
+                  <View className="mb-3">
+                    <Text className="mb-2 text-sm font-medium text-gray-700">Start Date</Text>
+                    <TouchableOpacity
+                      onPress={() => setBulkDatePickerMode('start')}
+                      className="rounded-xl border border-gray-300 bg-white px-4 py-3"
+                    >
+                      <Text className="text-base text-gray-900">
+                        {bulkStartDate
+                          ? new Date(bulkStartDate).toLocaleDateString('en-US', {
+                              month: 'long',
+                              day: 'numeric',
+                              year: 'numeric',
+                            })
+                          : 'Select start date'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  {/* End Date */}
+                  <View>
+                    <Text className="mb-2 text-sm font-medium text-gray-700">End Date</Text>
+                    <TouchableOpacity
+                      onPress={() => setBulkDatePickerMode('end')}
+                      className="rounded-xl border border-gray-300 bg-white px-4 py-3"
+                    >
+                      <Text className="text-base text-gray-900">
+                        {bulkEndDate
+                          ? new Date(bulkEndDate).toLocaleDateString('en-US', {
+                              month: 'long',
+                              day: 'numeric',
+                              year: 'numeric',
+                            })
+                          : 'Select end date'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  {/* Date Picker Calendar */}
+                  {bulkDatePickerMode && (
+                    <View className="mt-4 rounded-xl border border-gray-200 bg-gray-50 p-4">
+                      <View className="mb-3 flex-row items-center justify-between">
+                        <Text className="text-sm font-semibold text-gray-900">
+                          Select {bulkDatePickerMode === 'start' ? 'Start' : 'End'} Date
+                        </Text>
+                        <TouchableOpacity onPress={() => setBulkDatePickerMode(null)}>
+                          <MaterialIcons name="close" size={20} color="#6B7280" />
+                        </TouchableOpacity>
+                      </View>
+                      <Calendar
+                        minDate={bulkDatePickerMode === 'start' ? getTodayDate() : bulkStartDate}
+                        onDayPress={(day: DateData) => {
+                          const today = getTodayDate();
+                          if (bulkDatePickerMode === 'start') {
+                            if (day.dateString < today) {
+                              Alert.alert('Error', 'Start date cannot be in the past');
+                              return;
+                            }
+                            setBulkStartDate(day.dateString);
+                            if (bulkEndDate && day.dateString > bulkEndDate) {
+                              setBulkEndDate('');
+                            }
+                          } else {
+                            if (day.dateString < bulkStartDate) {
+                              Alert.alert(
+                                'Error',
+                                'End date must be after or equal to start date',
+                              );
+                              return;
+                            }
+                            setBulkEndDate(day.dateString);
+                          }
+                          setBulkDatePickerMode(null);
+                        }}
+                        markedDates={{
+                          [bulkStartDate]: {
+                            selected: true,
+                            selectedColor: '#3B82F6',
+                          },
+                          ...(bulkEndDate && {
+                            [bulkEndDate]: {
+                              selected: true,
+                              selectedColor: '#3B82F6',
+                            },
+                          }),
+                        }}
+                        theme={{
+                          selectedDayBackgroundColor: '#3B82F6',
+                          todayTextColor: '#3B82F6',
+                          arrowColor: '#3B82F6',
+                        }}
+                      />
+                    </View>
+                  )}
+                </View>
+
+                {/* Day Filter Section */}
+                <View className="mb-6">
+                  <Text className="mb-3 text-base font-semibold text-gray-900">
+                    Apply to Days
+                  </Text>
+
+                  {/* Filter Options */}
+                  <View className="mb-4 flex-row flex-wrap">
+                    {[
+                      { value: 'all', label: 'All Days' },
+                      { value: 'weekdays', label: 'Weekdays' },
+                      { value: 'weekends', label: 'Weekends' },
+                      { value: 'custom', label: 'Custom' },
+                    ].map((option) => (
+                      <TouchableOpacity
+                        key={option.value}
+                        onPress={() => setBulkDayFilter(option.value as any)}
+                        className={`mb-2 mr-2 rounded-lg border-2 px-4 py-2 ${
+                          bulkDayFilter === option.value
+                            ? 'border-blue-600 bg-blue-50'
+                            : 'border-gray-300 bg-white'
+                        }`}
+                      >
+                        <Text
+                          className={`text-sm font-semibold ${
+                            bulkDayFilter === option.value ? 'text-blue-600' : 'text-gray-700'
+                          }`}
+                        >
+                          {option.label}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+
+                  {/* Custom Day Selection */}
+                  {bulkDayFilter === 'custom' && (
+                    <View>
+                      <Text className="mb-2 text-sm font-medium text-gray-700">
+                        Select Days of Week
+                      </Text>
+                      <View className="flex-row flex-wrap">
+                        {dayNames.map((dayName, index) => {
+                          const isSelected = selectedDaysOfWeek.has(index);
+                          return (
+                            <TouchableOpacity
+                              key={index}
+                              onPress={() => toggleDayOfWeek(index)}
+                              className={`mb-2 mr-2 rounded-lg border-2 px-4 py-2 ${
+                                isSelected
+                                  ? 'border-blue-600 bg-blue-50'
+                                  : 'border-gray-300 bg-white'
+                              }`}
+                            >
+                              <Text
+                                className={`text-sm font-semibold ${
+                                  isSelected ? 'text-blue-600' : 'text-gray-700'
+                                }`}
+                              >
+                                {dayName}
+                              </Text>
+                            </TouchableOpacity>
+                          );
+                        })}
+                      </View>
+                    </View>
+                  )}
+                </View>
+
+                {/* Preview Info */}
+                <View className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+                  <Text className="mb-2 text-sm font-semibold text-gray-900">Preview</Text>
+                  <Text className="text-xs text-gray-600">
+                    Selected hours: {Array.from(selectedHourBlocks)
+                      .sort((a, b) => a - b)
+                      .map((h) => formatHour(h))
+                      .join(', ')}
+                  </Text>
+                  {bulkStartDate && bulkEndDate && (
+                    <Text className="mt-1 text-xs text-gray-600">
+                      Date range: {new Date(bulkStartDate).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                      })}{' '}
+                      -{' '}
+                      {new Date(bulkEndDate).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                      })}
+                    </Text>
+                  )}
+                  {bulkDayFilter !== 'all' && (
+                    <Text className="mt-1 text-xs text-gray-600">
+                      Filter: {bulkDayFilter === 'weekdays'
+                        ? 'Weekdays only'
+                        : bulkDayFilter === 'weekends'
+                          ? 'Weekends only'
+                          : 'Custom days'}
+                    </Text>
+                  )}
+                </View>
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
