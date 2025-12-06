@@ -63,6 +63,9 @@ export default function AvailabilityManagementScreen() {
   >('all');
   const [selectedDaysOfWeek, setSelectedDaysOfWeek] = useState<Set<number>>(new Set());
   const [bulkDatePickerMode, setBulkDatePickerMode] = useState<'start' | 'end' | null>(null);
+  const [timeRangeStart, setTimeRangeStart] = useState<number>(9);
+  const [timeRangeEnd, setTimeRangeEnd] = useState<number>(17);
+  const [showTimeRangePicker, setShowTimeRangePicker] = useState(false);
 
   // Fetch existing availability for the current month
   const fetchAvailability = useCallback(async () => {
@@ -131,6 +134,67 @@ export default function AvailabilityManagementScreen() {
       newSet.add(hour);
     }
     setSelectedHourBlocks(newSet);
+  };
+
+  const selectHourRange = (start: number, end: number) => {
+    setSelectedHourBlocks((prev) => {
+      const newSet = new Set(prev);
+      for (let hour = start; hour <= end; hour++) {
+        newSet.add(hour);
+      }
+      return newSet;
+    });
+  };
+
+  const selectMultipleRanges = (ranges: Array<{ start: number; end: number }>) => {
+    setSelectedHourBlocks((prev) => {
+      const newSet = new Set(prev);
+      ranges.forEach(({ start, end }) => {
+        for (let hour = start; hour <= end; hour++) {
+          newSet.add(hour);
+        }
+      });
+      return newSet;
+    });
+  };
+
+  const clearAllHours = () => {
+    setSelectedHourBlocks(new Set());
+  };
+
+  const applyTimeRange = () => {
+    if (timeRangeStart > timeRangeEnd) {
+      Alert.alert('Error', 'Start time must be before end time');
+      return;
+    }
+    selectHourRange(timeRangeStart, timeRangeEnd);
+    setShowTimeRangePicker(false);
+  };
+
+  const applyPreset = (preset: string) => {
+    switch (preset) {
+      case 'morning':
+        selectHourRange(6, 12); // 6 AM - 12 PM (noon)
+        break;
+      case 'afternoon':
+        selectHourRange(12, 18); // 12 PM - 6 PM
+        break;
+      case 'evening':
+        selectHourRange(18, 22); // 6 PM - 10 PM
+        break;
+      case 'night':
+        selectMultipleRanges([
+          { start: 22, end: 23 }, // 10 PM - 11 PM
+          { start: 0, end: 2 }, // 12 AM - 2 AM
+        ]);
+        break;
+      case 'all':
+        selectHourRange(0, 23); // All day
+        break;
+      case 'clear':
+        clearAllHours();
+        break;
+    }
   };
 
   const formatHour = (hour: number): string => {
@@ -464,12 +528,129 @@ export default function AvailabilityManagementScreen() {
             </Text>
           </View>
 
+          {/* Quick Select Presets */}
+          {selectedDate >= getTodayDate() && (
+            <View className="mb-4">
+              <Text className="mb-3 text-xs font-medium text-gray-500">Quick Select</Text>
+              <View className="flex-row flex-wrap" style={{ gap: 8 }}>
+                {[
+                  { key: 'morning', label: 'Morning', icon: 'wb-sunny' },
+                  { key: 'afternoon', label: 'Afternoon', icon: 'light-mode' },
+                  { key: 'evening', label: 'Evening', icon: 'nights-stay' },
+                  { key: 'night', label: 'Night', icon: 'nightlight' },
+                  { key: 'all', label: 'All Day', icon: 'schedule' },
+                  { key: 'clear', label: 'Clear', icon: 'clear' },
+                ].map((preset) => (
+                  <TouchableOpacity
+                    key={preset.key}
+                    onPress={() => applyPreset(preset.key)}
+                    className="flex-row items-center rounded-lg border border-gray-300 bg-white px-3 py-2"
+                  >
+                    <MaterialIcons name={preset.icon as any} size={16} color="#3B82F6" />
+                    <Text className="ml-1.5 text-xs font-medium text-gray-700">
+                      {preset.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          )}
+
+          {/* Time Range Picker */}
+          {/* {selectedDate >= getTodayDate() && (
+            <View className="mb-4">
+              <TouchableOpacity
+                onPress={() => setShowTimeRangePicker(!showTimeRangePicker)}
+                className="flex-row items-center justify-between rounded-lg border border-gray-300 bg-white px-4 py-3"
+              >
+                <View className="flex-row items-center">
+                  <MaterialIcons name="access-time" size={18} color="#3B82F6" />
+                  <Text className="ml-2 text-sm font-medium text-gray-700">
+                    Custom Range: {formatHour(timeRangeStart)} - {formatHour(timeRangeEnd)}
+                  </Text>
+                </View>
+                <MaterialIcons
+                  name={showTimeRangePicker ? 'expand-less' : 'expand-more'}
+                  size={20}
+                  color="#6B7280"
+                />
+              </TouchableOpacity>
+
+              {showTimeRangePicker && (
+                <View className="mt-3 rounded-lg border border-gray-200 bg-gray-50 p-4">
+                  <View className="mb-4">
+                    <Text className="mb-2 text-xs font-medium text-gray-700">Start Time</Text>
+                    <View className="flex-row items-center justify-between">
+                      <View className="flex-row flex-1" style={{ gap: 8 }}>
+                        {[6, 9, 12, 15, 18, 21].map((hour) => (
+                          <TouchableOpacity
+                            key={hour}
+                            onPress={() => setTimeRangeStart(hour)}
+                            className={`flex-1 rounded-lg border-2 py-2 ${
+                              timeRangeStart === hour
+                                ? 'border-blue-600 bg-blue-600'
+                                : 'border-gray-300 bg-white'
+                            }`}
+                          >
+                            <Text
+                              className={`text-center text-xs font-semibold ${
+                                timeRangeStart === hour ? 'text-white' : 'text-gray-700'
+                              }`}
+                            >
+                              {formatHour(hour)}
+                            </Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    </View>
+                  </View>
+
+                  <View className="mb-4">
+                    <Text className="mb-2 text-xs font-medium text-gray-700">End Time</Text>
+                    <View className="flex-row items-center justify-between">
+                      <View className="flex-row flex-1" style={{ gap: 8 }}>
+                        {[9, 12, 15, 18, 21, 23].map((hour) => (
+                          <TouchableOpacity
+                            key={hour}
+                            onPress={() => setTimeRangeEnd(hour)}
+                            className={`flex-1 rounded-lg border-2 py-2 ${
+                              timeRangeEnd === hour
+                                ? 'border-blue-600 bg-blue-600'
+                                : 'border-gray-300 bg-white'
+                            }`}
+                          >
+                            <Text
+                              className={`text-center text-xs font-semibold ${
+                                timeRangeEnd === hour ? 'text-white' : 'text-gray-700'
+                              }`}
+                            >
+                              {formatHour(hour)}
+                            </Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    </View>
+                  </View>
+
+                  <TouchableOpacity
+                    onPress={applyTimeRange}
+                    className="rounded-lg bg-blue-600 py-2.5"
+                  >
+                    <Text className="text-center text-sm font-semibold text-white">
+                      Apply Range
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+          )} */}
+
           {/* Hour Blocks Grid */}
           <View className="mb-4">
-            <Text className="mb-4 text-sm font-semibold text-gray-700">
+            <Text className="mb-3 text-sm font-semibold text-gray-700">
               {selectedDate < getTodayDate()
                 ? 'Available Hours (View Only)'
-                : 'Select Available Hours'}
+                : 'Selected Hours'}
             </Text>
             <View className="flex-row flex-wrap" style={{ gap: 8 }}>
               {Array.from({ length: 24 }, (_, i) => i).map((hour) => {
