@@ -119,11 +119,6 @@ export default function AvailabilityManagementScreen() {
   const handleSave = async () => {
     if (!circleId || !selectedDate) return;
 
-    if (selectedHourBlocks.size === 0) {
-      Alert.alert('Error', 'Please select at least one time block');
-      return;
-    }
-
     try {
       setSaving(true);
 
@@ -131,6 +126,22 @@ export default function AvailabilityManagementScreen() {
       const existingBlocks = availabilityData.filter(
         (item) => item.date === selectedDate && item.user_id === user?.id,
       );
+
+      // If no hours are selected, delete all availability for this date
+      if (selectedHourBlocks.size === 0) {
+        // Delete all existing blocks for this date
+        for (const block of existingBlocks) {
+          try {
+            await availabilityApi.deleteAvailabilityBlock(block.id);
+          } catch (error) {
+            // Continue even if delete fails
+          }
+        }
+        Alert.alert('Success', 'Availability removed for this date');
+        await fetchAvailability();
+        setSaving(false);
+        return;
+      }
 
       // Delete blocks that are no longer selected
       const blocksToDelete = existingBlocks.filter(
@@ -325,16 +336,22 @@ export default function AvailabilityManagementScreen() {
           <View className="flex-row space-x-3">
             <TouchableOpacity
               onPress={handleSave}
-              disabled={saving || selectedHourBlocks.size === 0}
+              disabled={saving}
               className="flex-1 flex-row items-center justify-center rounded-xl bg-blue-600 py-3"
-              style={{ opacity: saving || selectedHourBlocks.size === 0 ? 0.6 : 1 }}
+              style={{ opacity: saving ? 0.6 : 1 }}
             >
               {saving ? (
                 <ActivityIndicator size="small" color="#FFFFFF" />
               ) : (
                 <>
-                  <MaterialIcons name="save" size={20} color="#FFFFFF" />
-                  <Text className="ml-2 text-base font-semibold text-white">Save Day</Text>
+                  <MaterialIcons
+                    name={selectedHourBlocks.size === 0 ? 'delete' : 'save'}
+                    size={20}
+                    color="#FFFFFF"
+                  />
+                  <Text className="ml-2 text-base font-semibold text-white">
+                    {selectedHourBlocks.size === 0 ? 'Remove All' : 'Save Day'}
+                  </Text>
                 </>
               )}
             </TouchableOpacity>
@@ -359,6 +376,7 @@ export default function AvailabilityManagementScreen() {
               <Text className="text-sm font-semibold text-blue-900">Tips</Text>
               <Text className="mt-1 text-xs text-blue-800">
                 • Select hours to mark yourself as available{'\n'}
+                • Deselect all hours and save to remove availability for a date{'\n'}
                 • Use "Save Day" to update the selected date{'\n'}
                 • Use "Bulk Set" to apply selected hours to a date range
               </Text>
