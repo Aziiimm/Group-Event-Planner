@@ -203,40 +203,68 @@ export default function AvailabilityManagementScreen() {
     }
   };
 
-  const handleBulkSet = () => {
+  const handleBulkSet = async () => {
     if (selectedHourBlocks.size === 0) {
       Alert.alert('Error', 'Please select at least one time block first');
       return;
     }
 
+    if (!circleId) return;
+
     Alert.alert(
       'Bulk Set Availability',
-      'This will set the selected hours for the entire current month. Continue?',
+      'This will replace all availability for the rest of the current month (today onwards) with the selected hours. Continue?',
       [
         {
           text: 'Cancel',
           style: 'cancel',
         },
         {
-          text: 'Set for Month',
+          text: 'Replace for Month',
           onPress: async () => {
-            if (!circleId) return;
-
             try {
               setSaving(true);
+              const today = getTodayDate();
               const now = new Date();
               const year = now.getFullYear();
               const month = now.getMonth();
-              const startDate = new Date(year, month, 1).toISOString().split('T')[0];
+              // Start from today, end at last day of current month
+              const startDate = today;
               const endDate = new Date(year, month + 1, 0).toISOString().split('T')[0];
 
+              // First, get all existing availability for the date range
+              const existingData = await availabilityApi.getCircleAvailability(
+                circleId,
+                startDate,
+                endDate,
+              );
+
+              // Filter to only current user's availability
+              const userAvailability = (existingData || []).filter(
+                (item: any) => item.user?.id === user?.id || item.user_id === user?.id,
+              );
+
+              // Delete all existing availability for the date range (to replace, not add)
+              for (const block of userAvailability) {
+                try {
+                  await availabilityApi.deleteAvailabilityBlock(block.id);
+                } catch (error) {
+                  // Continue even if delete fails
+                }
+              }
+
+              // Now set the new availability for the date range
               await availabilityApi.setAvailability(circleId, {
                 start_date: startDate,
                 end_date: endDate,
                 hour_blocks: Array.from(selectedHourBlocks),
                 is_available: true,
               });
-              Alert.alert('Success', 'Availability set for the entire month');
+
+              Alert.alert(
+                'Success',
+                `Availability replaced for ${new Date(startDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric' })} through ${new Date(endDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}`,
+              );
               await fetchAvailability();
             } catch (error: any) {
               Alert.alert('Error', error.message || 'Failed to set availability');
