@@ -448,24 +448,30 @@ export default function AvailabilityManagementScreen() {
         </View>
 
         {/* Selected Date Info */}
-        <View className="mx-6 mt-6 rounded-xl bg-white p-4 shadow-sm">
-          <Text className="mb-3 text-lg font-semibold text-gray-900">
-            {new Date(selectedDate).toLocaleDateString('en-US', {
-              weekday: 'long',
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric',
-            })}
-          </Text>
+        <View className="mx-6 mt-6 rounded-xl bg-white p-5 shadow-sm">
+          <View className="mb-4 border-b border-gray-100 pb-3">
+            <Text className="text-base font-medium text-gray-500">
+              {new Date(selectedDate).toLocaleDateString('en-US', {
+                weekday: 'long',
+              })}
+            </Text>
+            <Text className="mt-1 text-2xl font-bold text-gray-900">
+              {new Date(selectedDate).toLocaleDateString('en-US', {
+                month: 'long',
+                day: 'numeric',
+                year: 'numeric',
+              })}
+            </Text>
+          </View>
 
           {/* Hour Blocks Grid */}
           <View className="mb-4">
-            <Text className="mb-3 text-sm font-medium text-gray-700">
+            <Text className="mb-4 text-sm font-semibold text-gray-700">
               {selectedDate < getTodayDate()
                 ? 'Available Hours (View Only)'
-                : 'Select Available Hours (24-hour format)'}
+                : 'Select Available Hours'}
             </Text>
-            <View className="flex-row flex-wrap">
+            <View className="flex-row flex-wrap" style={{ gap: 8 }}>
               {Array.from({ length: 24 }, (_, i) => i).map((hour) => {
                 const isSelected = selectedHourBlocks.has(hour);
                 const isPastDate = selectedDate < getTodayDate();
@@ -478,15 +484,16 @@ export default function AvailabilityManagementScreen() {
                       }
                     }}
                     disabled={isPastDate}
-                    className={`mb-2 mr-2 rounded-lg border-2 p-3 ${
+                    className={`rounded-lg border-2 p-2.5 ${
                       isSelected
-                        ? 'border-blue-600 bg-blue-50'
-                        : 'border-gray-300 bg-white'
-                    } ${isPastDate ? 'opacity-60' : ''}`}
+                        ? 'border-blue-600 bg-blue-600'
+                        : 'border-gray-200 bg-white'
+                    } ${isPastDate ? 'opacity-50' : ''}`}
+                    style={{ width: '22%' }}
                   >
                     <Text
-                      className={`text-sm font-semibold ${
-                        isSelected ? 'text-blue-600' : 'text-gray-700'
+                      className={`text-center text-xs font-semibold ${
+                        isSelected ? 'text-white' : 'text-gray-700'
                       }`}
                     >
                       {formatHour(hour)}
@@ -499,21 +506,21 @@ export default function AvailabilityManagementScreen() {
 
           {/* Action Buttons */}
           {selectedDate < getTodayDate() ? (
-            <View className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+            <View className="rounded-lg border border-gray-200 bg-gray-50 p-3">
               <View className="flex-row items-center">
-                <MaterialIcons name="lock" size={20} color="#6B7280" />
-                <Text className="ml-2 text-sm text-gray-600">
+                <MaterialIcons name="lock" size={18} color="#6B7280" />
+                <Text className="ml-2 flex-1 text-xs text-gray-600">
                   Past dates are view-only. You cannot modify availability for dates that have
                   already passed.
                 </Text>
               </View>
             </View>
           ) : (
-            <View className="flex-row space-x-3">
+            <View className="flex-row" style={{ gap: 12 }}>
               <TouchableOpacity
                 onPress={handleSave}
                 disabled={saving}
-                className="flex-1 flex-row items-center justify-center rounded-xl bg-blue-600 py-3"
+                className="flex-1 flex-row items-center justify-center rounded-xl bg-blue-600 py-3.5"
                 style={{ opacity: saving ? 0.6 : 1 }}
               >
                 {saving ? (
@@ -522,10 +529,10 @@ export default function AvailabilityManagementScreen() {
                   <>
                     <MaterialIcons
                       name={selectedHourBlocks.size === 0 ? 'delete' : 'save'}
-                      size={20}
+                      size={18}
                       color="#FFFFFF"
                     />
-                    <Text className="ml-2 text-base font-semibold text-white">
+                    <Text className="ml-2 text-sm font-semibold text-white">
                       {selectedHourBlocks.size === 0 ? 'Remove All' : 'Save Day'}
                     </Text>
                   </>
@@ -535,11 +542,11 @@ export default function AvailabilityManagementScreen() {
               <TouchableOpacity
                 onPress={handleBulkSetOpen}
                 disabled={saving || selectedHourBlocks.size === 0}
-                className="flex-1 flex-row items-center justify-center rounded-xl border-2 border-blue-600 bg-white py-3"
+                className="flex-1 flex-row items-center justify-center rounded-xl border-2 border-blue-600 bg-white py-3.5"
                 style={{ opacity: saving || selectedHourBlocks.size === 0 ? 0.6 : 1 }}
               >
-                <MaterialIcons name="date-range" size={20} color="#3B82F6" />
-                <Text className="ml-2 text-base font-semibold text-blue-600">Bulk Set</Text>
+                <MaterialIcons name="date-range" size={18} color="#3B82F6" />
+                <Text className="ml-2 text-sm font-semibold text-blue-600">Bulk Set</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -548,14 +555,13 @@ export default function AvailabilityManagementScreen() {
         {/* Info Section */}
         <View className="mx-6 mb-6 mt-4 rounded-xl bg-blue-50 p-4">
           <View className="flex-row items-start">
-            <MaterialIcons name="info" size={20} color="#3B82F6" />
+            <MaterialIcons name="info" size={18} color="#3B82F6" />
             <View className="ml-3 flex-1">
-              <Text className="text-sm font-semibold text-blue-900">Tips</Text>
-              <Text className="mt-1 text-xs text-blue-800">
-                • Select hours to mark yourself as available{'\n'}
-                • Deselect all hours and save to remove availability for a date{'\n'}
-                • Use "Save Day" to update the selected date{'\n'}
-                • Use "Bulk Set" to apply selected hours to a custom date range with day filters
+              <Text className="text-xs font-semibold text-blue-900">Quick Tips</Text>
+              <Text className="mt-1.5 text-xs leading-4 text-blue-800">
+                • Tap hours to mark yourself as available{'\n'}
+                • Deselect all and save to remove availability{'\n'}
+                • Use "Bulk Set" to apply hours to multiple dates
               </Text>
             </View>
           </View>
