@@ -195,7 +195,10 @@ export default function CreateEventScreen() {
           >
             <MaterialIcons name="arrow-back" size={24} color="#FFFFFF" />
           </TouchableOpacity>
-          <Text className="flex-1 text-2xl font-bold text-white">Create Event</Text>
+          <View className="flex-1">
+            <Text className="text-2xl font-bold text-white">Create Event</Text>
+            <Text className="mt-1 text-sm text-white/90">Plan a new event for your circle</Text>
+          </View>
         </View>
       </View>
 
