@@ -20,7 +20,8 @@ interface EventHost {
 interface Event {
   id: string;
   title: string;
-  date_time: string;
+  start_time: string;
+  end_time: string;
   location: string;
   description: string | null;
   status: 'upcoming' | 'completed';
@@ -192,6 +193,41 @@ export default function EventDetailScreen() {
     }
   };
 
+  const formatTimeRange = (startTimeString: string, endTimeString: string) => {
+    try {
+      const startDate = new Date(startTimeString);
+      const endDate = new Date(endTimeString);
+      
+      // Check if same day
+      const isSameDay = startDate.toDateString() === endDate.toDateString();
+      
+      if (isSameDay) {
+        const dateStr = startDate.toLocaleString('en-US', {
+          weekday: 'long',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+        });
+        const startTimeStr = startDate.toLocaleString('en-US', {
+          hour: 'numeric',
+          minute: '2-digit',
+        });
+        const endTimeStr = endDate.toLocaleString('en-US', {
+          hour: 'numeric',
+          minute: '2-digit',
+        });
+        return `${dateStr} from ${startTimeStr} to ${endTimeStr}`;
+      } else {
+        // Different days - show full date range
+        const startStr = formatDateTime(startTimeString);
+        const endStr = formatDateTime(endTimeString);
+        return `${startStr} to ${endStr}`;
+      }
+    } catch {
+      return 'Invalid date range';
+    }
+  };
+
   const getInitials = (firstName: string | null, lastName: string | null, displayName: string) => {
     if (firstName && lastName) {
       return `${firstName[0]}${lastName[0]}`.toUpperCase();
@@ -270,7 +306,7 @@ export default function EventDetailScreen() {
               <View className="ml-3 flex-1">
                 <Text className="text-sm font-semibold text-gray-500">Date & Time</Text>
                 <Text className="mt-1 text-base text-gray-900">
-                  {formatDateTime(event.date_time)}
+                  {formatTimeRange(event.start_time, event.end_time)}
                 </Text>
               </View>
             </View>
