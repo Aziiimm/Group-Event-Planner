@@ -387,16 +387,25 @@ export default function CircleDetailScreen() {
           </View>
         )}
 
-        {/* Create Event Button (for all members) */}
+        {/* Action Buttons (for all members) */}
         {circle?.userRole && !circle?.hasPendingInvitation && (
           <View className={`px-6 ${canInvite ? 'pt-4' : 'pt-6'}`}>
-            <TouchableOpacity
-              onPress={() => router.push(`/events/create?circleId=${circle.id}` as any)}
-              className="flex-row items-center justify-center rounded-xl bg-blue-600 py-3 shadow-sm"
-            >
-              <MaterialIcons name="event" size={20} color="#FFFFFF" />
-              <Text className="ml-2 text-base font-semibold text-white">Create Event</Text>
-            </TouchableOpacity>
+            <View className="flex-row space-x-3">
+              <TouchableOpacity
+                onPress={() => router.push(`/events/create?circleId=${circle.id}` as any)}
+                className="flex-1 flex-row items-center justify-center rounded-xl bg-blue-600 py-3 shadow-sm"
+              >
+                <MaterialIcons name="event" size={20} color="#FFFFFF" />
+                <Text className="ml-2 text-base font-semibold text-white">Create Event</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => router.push(`/availability/${circle.id}` as any)}
+                className="flex-1 flex-row items-center justify-center rounded-xl bg-green-600 py-3 shadow-sm"
+              >
+                <MaterialIcons name="schedule" size={20} color="#FFFFFF" />
+                <Text className="ml-2 text-base font-semibold text-white">Availability</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         )}
 
