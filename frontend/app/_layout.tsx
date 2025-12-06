@@ -37,6 +37,41 @@ export default function RootLayout() {
               title: 'Create Circle'
             }} 
           />
+          <Stack.Screen 
+            name="availability/[circleId]" 
+            options={{ 
+              headerShown: false,
+              title: 'Manage Availability'
+            }} 
+          />
+          <Stack.Screen 
+            name="events/create" 
+            options={{ 
+              headerShown: false,
+              title: 'Create Event'
+            }} 
+          />
+          <Stack.Screen 
+            name="events/[id]" 
+            options={{ 
+              headerShown: false,
+              title: 'Event Details'
+            }} 
+          />
+          <Stack.Screen 
+            name="expenses/create" 
+            options={{ 
+              headerShown: false,
+              title: 'Create Expense'
+            }} 
+          />
+          <Stack.Screen 
+            name="expenses/edit" 
+            options={{ 
+              headerShown: false,
+              title: 'Edit Expense'
+            }} 
+          />
           <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
         </Stack>
         <StatusBar style="auto" />

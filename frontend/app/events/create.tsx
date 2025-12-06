@@ -17,6 +17,7 @@ import {
 import { Calendar } from 'react-native-calendars';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import AvailabilityHeatmap from '@/components/availability/availability-heatmap';
 import { eventsApi } from '@/lib/api';
 
 export default function CreateEventScreen() {
@@ -194,7 +195,10 @@ export default function CreateEventScreen() {
           >
             <MaterialIcons name="arrow-back" size={24} color="#FFFFFF" />
           </TouchableOpacity>
-          <Text className="flex-1 text-2xl font-bold text-white">Create Event</Text>
+          <View className="flex-1">
+            <Text className="text-2xl font-bold text-white">Create Event</Text>
+            <Text className="mt-1 text-sm text-white/90">Plan a new event for your circle</Text>
+          </View>
         </View>
       </View>
 
@@ -344,6 +348,31 @@ export default function CreateEventScreen() {
               display="default"
               onChange={handleTimeChange}
             />
+          )}
+
+          {/* Availability Heatmap */}
+          {circleId && (
+            <View className="mb-6">
+              <Text className="mb-3 text-base font-semibold text-gray-700">
+                Circle Availability
+              </Text>
+              <AvailabilityHeatmap
+                circleId={circleId}
+                onDatePress={(date) => {
+                  // When user taps a date in heatmap, pre-fill the date picker
+                  const [year, month, day] = date.split('-').map(Number);
+                  const newDate = new Date(year, month - 1, day);
+                  newDate.setHours(12, 0, 0, 0); // Default to noon
+                  setSelectedDate(newDate);
+                  setDateTime(formatDateTime(newDate));
+                  setSelectedCalendarDate(date);
+                }}
+                showHourDetails={true}
+              />
+              <Text className="mt-2 text-xs text-gray-500">
+                Tap a date to see when members are available, or select it for your event
+              </Text>
+            </View>
           )}
 
           {/* Location */}
