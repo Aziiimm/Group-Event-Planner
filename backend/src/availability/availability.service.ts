@@ -174,21 +174,9 @@ export class AvailabilityService {
     // Verify user is a member of the circle
     await this.verifyCircleMembership(circleId, userId);
 
-    // Build query
-    let query = supabase
-      .from('availability')
-      .select(
-        `
-        *,
-        user:users!availability_user_id_fkey(
-          id,
-          display_name,
-          first_name,
-          last_name
-        )
-      `,
-      )
-      .eq('circle_id', circleId);
+    // Build query - fetch availability data
+    // Note: We'll fetch user data separately if needed to avoid relationship issues
+    let query = supabase.from('availability').select('*').eq('circle_id', circleId);
 
     // Apply date filters if provided
     if (dateRangeQuery?.start_date) {
@@ -209,7 +197,31 @@ export class AvailabilityService {
       );
     }
 
-    return data || [];
+    if (!data || data.length === 0) {
+      return [];
+    }
+
+    // Get unique user IDs
+    const userIds = [...new Set(data.map((item) => item.user_id))];
+
+    // Fetch all users in one query
+    const { data: usersData } = await supabase
+      .from('users')
+      .select('id, display_name, first_name, last_name')
+      .in('id', userIds);
+
+    // Create a map for quick lookup
+    const usersMap = new Map(
+      (usersData || []).map((user) => [user.id, user]),
+    );
+
+    // Map availability data with user information
+    const availabilityWithUsers = data.map((availability) => ({
+      ...availability,
+      user: usersMap.get(availability.user_id) || null,
+    }));
+
+    return availabilityWithUsers;
   }
 
   async getAvailabilityHeatmap(
