@@ -264,38 +264,43 @@ export default function CircleDetailScreen() {
     return member.user.display_name || 'Unknown User';
   };
 
-  const formatEventDateTime = (dateTimeString: string) => {
+  const formatEventDateTime = (startTimeString: string, endTimeString?: string) => {
     try {
-      const date = new Date(dateTimeString);
+      const startDate = new Date(startTimeString);
       const now = new Date();
-      const diffDays = Math.floor((date.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+      const diffDays = Math.floor((startDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+
+      const startTimeStr = startDate.toLocaleTimeString('en-US', {
+        hour: 'numeric',
+        minute: '2-digit',
+      });
+
+      let timeRange = startTimeStr;
+      if (endTimeString) {
+        const endDate = new Date(endTimeString);
+        const endTimeStr = endDate.toLocaleTimeString('en-US', {
+          hour: 'numeric',
+          minute: '2-digit',
+        });
+        timeRange = `${startTimeStr} - ${endTimeStr}`;
+      }
 
       if (diffDays === 0) {
-        return `Today at ${date.toLocaleTimeString('en-US', {
-          hour: 'numeric',
-          minute: '2-digit',
-        })}`;
+        return `Today at ${timeRange}`;
       } else if (diffDays === 1) {
-        return `Tomorrow at ${date.toLocaleTimeString('en-US', {
-          hour: 'numeric',
-          minute: '2-digit',
-        })}`;
+        return `Tomorrow at ${timeRange}`;
       } else if (diffDays > 1 && diffDays <= 7) {
-        return date.toLocaleDateString('en-US', {
+        return `${startDate.toLocaleDateString('en-US', {
           weekday: 'long',
-          hour: 'numeric',
-          minute: '2-digit',
-        });
+        })} at ${timeRange}`;
       } else {
-        return date.toLocaleDateString('en-US', {
+        return `${startDate.toLocaleDateString('en-US', {
           month: 'short',
           day: 'numeric',
-          hour: 'numeric',
-          minute: '2-digit',
-        });
+        })} at ${timeRange}`;
       }
     } catch {
-      return dateTimeString;
+      return startTimeString;
     }
   };
 
@@ -445,9 +450,9 @@ export default function CircleDetailScreen() {
                         <Text className="text-base font-semibold text-gray-900">
                           {event.title || 'Untitled Event'}
                         </Text>
-                        {event.date_time && (
+                        {event.start_time && (
                           <Text className="mt-1 text-sm text-gray-600">
-                            {formatEventDateTime(event.date_time)}
+                            {formatEventDateTime(event.start_time, event.end_time)}
                           </Text>
                         )}
                         {event.location && (
