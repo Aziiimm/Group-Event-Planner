@@ -195,7 +195,8 @@ export const eventsApi = {
     circleId: string,
     eventData: {
       title: string;
-      date_time: string;
+      start_time: string;
+      end_time: string;
       location: string;
       description?: string;
     },

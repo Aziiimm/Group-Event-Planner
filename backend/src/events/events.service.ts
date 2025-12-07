@@ -61,6 +61,14 @@ export class EventsService {
     // Verify user is a member of the circle
     await this.verifyCircleMembership(circleId, user.id);
 
+    // Validate that end_time is after start_time
+    const startTime = new Date(createEventDto.start_time);
+    const endTime = new Date(createEventDto.end_time);
+    
+    if (endTime <= startTime) {
+      throw new BadRequestException('end_time must be after start_time');
+    }
+
     // Create the event
     const { data: event, error } = await supabase
       .from('events')
@@ -68,7 +76,8 @@ export class EventsService {
         circle_id: circleId,
         host_id: user.id,
         title: createEventDto.title,
-        date_time: createEventDto.date_time,
+        start_time: createEventDto.start_time,
+        end_time: createEventDto.end_time,
         location: createEventDto.location,
         description: createEventDto.description || null,
         status: 'upcoming',
@@ -106,7 +115,7 @@ export class EventsService {
       `,
       )
       .eq('circle_id', circleId)
-      .order('date_time', { ascending: true });
+      .order('start_time', { ascending: true });
 
     if (error) {
       throw new InternalServerErrorException(
@@ -114,13 +123,13 @@ export class EventsService {
       );
     }
 
-    // Compute status on-the-fly: mark as completed if date_time has passed
+    // Compute status on-the-fly: mark as completed if end_time has passed
     const now = new Date();
     const eventsWithComputedStatus = (events || []).map((event) => {
-      const eventDate = new Date(event.date_time);
+      const eventEndTime = new Date(event.end_time);
       return {
         ...event,
-        status: eventDate < now ? 'completed' : event.status,
+        status: eventEndTime < now ? 'completed' : event.status,
       };
     });
 
@@ -154,12 +163,12 @@ export class EventsService {
     // Verify user is a member of the circle that this event belongs to
     await this.verifyCircleMembership(event.circle_id, userId);
 
-    // Compute status on-the-fly: mark as completed if date_time has passed
+    // Compute status on-the-fly: mark as completed if end_time has passed
     const now = new Date();
-    const eventDate = new Date(event.date_time);
+    const eventEndTime = new Date(event.end_time);
     const eventWithComputedStatus = {
       ...event,
-      status: eventDate < now ? 'completed' : event.status,
+      status: eventEndTime < now ? 'completed' : event.status,
     };
 
     return eventWithComputedStatus;

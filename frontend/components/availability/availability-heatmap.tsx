@@ -22,6 +22,11 @@ interface AvailabilityHeatmapProps {
   endDate?: string;
   onDatePress?: (date: string) => void;
   showHourDetails?: boolean;
+  onTimeSelect?: (date: string, startHour: number, endHour: number) => void;
+  onTimeClear?: () => void;
+  selectedDate?: string;
+  selectedStartHour?: number;
+  selectedEndHour?: number;
 }
 
 export default function AvailabilityHeatmap({
@@ -30,11 +35,21 @@ export default function AvailabilityHeatmap({
   endDate,
   onDatePress,
   showHourDetails = false,
+  onTimeSelect,
+  onTimeClear,
+  selectedDate: externalSelectedDate,
+  selectedStartHour,
+  selectedEndHour,
 }: AvailabilityHeatmapProps) {
   const [loading, setLoading] = useState(true);
   const [heatmapData, setHeatmapData] = useState<HeatmapData[]>([]);
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [internalSelectedDate, setInternalSelectedDate] = useState<string | null>(null);
   const [maxAvailability, setMaxAvailability] = useState<number>(1);
+  const [timeSelectionStart, setTimeSelectionStart] = useState<number | null>(null);
+  const [previewEndHour, setPreviewEndHour] = useState<number | null>(null);
+  
+  // Use external selectedDate if provided, otherwise use internal state
+  const selectedDate = externalSelectedDate || internalSelectedDate;
 
   // Calculate date range (default to current month)
   const getDateRange = () => {
@@ -170,10 +185,74 @@ export default function AvailabilityHeatmap({
   };
 
   const handleDatePress = (day: DateData) => {
-    setSelectedDate(day.dateString);
+    if (!externalSelectedDate) {
+      setInternalSelectedDate(day.dateString);
+    }
     if (onDatePress) {
       onDatePress(day.dateString);
     }
+    // Reset time selection when date changes
+    setTimeSelectionStart(null);
+    setPreviewEndHour(null);
+  };
+
+  const handleHourPress = (hour: number) => {
+    if (!selectedDate || !onTimeSelect) return;
+
+    if (timeSelectionStart === null) {
+      // First click - set start time
+      setTimeSelectionStart(hour);
+      setPreviewEndHour(hour);
+      onTimeSelect(selectedDate, hour, hour);
+    } else {
+      // Second click - set end time and complete selection
+      const start = Math.min(timeSelectionStart, hour);
+      const end = Math.max(timeSelectionStart, hour);
+      onTimeSelect(selectedDate, start, end);
+      setTimeSelectionStart(null);
+      setPreviewEndHour(null);
+    }
+  };
+
+  const handleHourPressIn = (hour: number) => {
+    if (!selectedDate || !onTimeSelect || timeSelectionStart === null) return;
+    // Update preview as user moves finger/hover
+    setPreviewEndHour(hour);
+  };
+
+  const handleHourPressOut = () => {
+    // Keep preview when user releases, they can tap again to confirm
+  };
+
+  const clearTimeSelection = () => {
+    setTimeSelectionStart(null);
+    setPreviewEndHour(null);
+    if (onTimeClear) {
+      onTimeClear();
+    }
+  };
+
+  const isHourInSelectedRange = (hour: number): boolean => {
+    if (!selectedDate || selectedStartHour === undefined || selectedEndHour === undefined) {
+      return false;
+    }
+    const start = Math.min(selectedStartHour, selectedEndHour);
+    const end = Math.max(selectedStartHour, selectedEndHour);
+    return hour >= start && hour <= end;
+  };
+
+  const isHourInPreviewRange = (hour: number): boolean => {
+    if (!selectedDate || timeSelectionStart === null || previewEndHour === null) {
+      return false;
+    }
+    const start = Math.min(timeSelectionStart, previewEndHour);
+    const end = Math.max(timeSelectionStart, previewEndHour);
+    return hour >= start && hour <= end;
+  };
+
+  const isHourBeingSelected = (hour: number): boolean => {
+    if (!selectedDate || timeSelectionStart === null) return false;
+    return hour === timeSelectionStart;
   };
 
   // Get hour details for selected date
@@ -234,30 +313,78 @@ export default function AvailabilityHeatmap({
       {/* Selected Date Details */}
       {selectedDate && selectedHourDetails && selectedHourDetails.length > 0 && showHourDetails && (
         <View className="mt-4 rounded-lg border border-gray-200 bg-gray-50 p-4">
-          <Text className="mb-3 text-sm font-semibold text-gray-900">
-            {new Date(selectedDate).toLocaleDateString('en-US', {
-              weekday: 'long',
-              month: 'long',
-              day: 'numeric',
-            })}
-          </Text>
+          <View className="mb-3 flex-row items-center justify-between">
+            <Text className="text-sm font-semibold text-gray-900">
+              {new Date(selectedDate).toLocaleDateString('en-US', {
+                weekday: 'long',
+                month: 'long',
+                day: 'numeric',
+              })}
+            </Text>
+            {onTimeSelect && (timeSelectionStart !== null || (selectedStartHour !== undefined && selectedEndHour !== undefined)) && (
+              <TouchableOpacity
+                onPress={clearTimeSelection}
+                className="rounded-lg px-3 py-1.5"
+                style={{ backgroundColor: '#FEE2E2' }}
+              >
+                <Text className="text-xs font-medium" style={{ color: '#DC2626' }}>
+                  Clear
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
+          {onTimeSelect && (
+            <Text className="mb-3 text-xs text-gray-500">
+              {timeSelectionStart !== null
+                ? `Tap another hour to set end time (${formatHour(timeSelectionStart)} - ${previewEndHour !== null ? formatHour(previewEndHour) : '...'})`
+                : selectedStartHour !== undefined && selectedEndHour !== undefined
+                  ? `Selected: ${formatHour(selectedStartHour)} - ${formatHour(selectedEndHour)}`
+                  : 'Tap an hour to start selecting time range'}
+            </Text>
+          )}
           <View className="flex-row flex-wrap">
             {selectedHourDetails
               .sort((a, b) => a.hour_block - b.hour_block)
               .map((hour) => {
                 const color = getColorIntensity(hour.percentage);
+                const isSelected = isHourInSelectedRange(hour.hour_block);
+                const isSelecting = isHourBeingSelected(hour.hour_block);
+                const isPreview = isHourInPreviewRange(hour.hour_block) && !isSelected;
+
                 return (
-                  <View
+                  <TouchableOpacity
                     key={hour.hour_block}
-                    className="mb-2 mr-2 rounded-lg border border-gray-300 bg-white p-2"
+                    onPress={() => onTimeSelect && handleHourPress(hour.hour_block)}
+                    onPressIn={() => onTimeSelect && handleHourPressIn(hour.hour_block)}
+                    onPressOut={handleHourPressOut}
+                    disabled={!onTimeSelect}
+                    className={`mb-2 mr-2 rounded-lg border-2 p-2 ${
+                      isSelected
+                        ? 'border-blue-600 bg-blue-600'
+                        : isSelecting
+                          ? 'border-blue-500 bg-blue-500'
+                          : isPreview
+                            ? 'border-blue-400 bg-blue-200'
+                            : 'border-gray-300 bg-white'
+                    }`}
                     style={{
-                      backgroundColor: color === 'transparent' ? '#F9FAFB' : color,
+                      backgroundColor: isSelected
+                        ? '#2563EB' // blue-600
+                        : isSelecting
+                          ? '#3B82F6' // blue-500
+                          : isPreview
+                            ? '#BFDBFE' // blue-200 (more visible preview)
+                            : color === 'transparent' ? '#F9FAFB' : color,
                     }}
                   >
                     <Text
                       className="text-xs font-semibold"
                       style={{
-                        color: hour.percentage > 50 ? '#FFFFFF' : '#1F2937',
+                        color: isSelected || isSelecting
+                          ? '#FFFFFF'
+                          : hour.percentage > 50 && !isPreview && !isSelected
+                            ? '#FFFFFF'
+                            : '#1F2937',
                       }}
                     >
                       {formatHour(hour.hour_block)}
@@ -265,12 +392,16 @@ export default function AvailabilityHeatmap({
                     <Text
                       className="text-xs"
                       style={{
-                        color: hour.percentage > 50 ? '#FFFFFF' : '#6B7280',
+                        color: isSelected || isSelecting
+                          ? '#FFFFFF'
+                          : hour.percentage > 50 && !isPreview && !isSelected
+                            ? '#FFFFFF'
+                            : '#6B7280',
                       }}
                     >
                       {hour.available_count}/{hour.total_members}
                     </Text>
-                  </View>
+                  </TouchableOpacity>
                 );
               })}
           </View>
