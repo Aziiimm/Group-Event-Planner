@@ -95,4 +95,35 @@ describe('apiRequest / circlesApi', () => {
     );
     fetchMock.mockRestore();
   });
+
+  it('searchUsers encodes query parameter correctly', async () => {
+    jest.doMock('@/lib/supabase', () => ({
+      supabase: {
+        auth: {
+          getSession: jest
+            .fn()
+            .mockResolvedValue({ data: { session: { access_token: 'tok-123', expires_at: Math.floor(Date.now() / 1000) + 3600 } }, error: null }),
+          refreshSession: jest.fn().mockResolvedValue({ data: { session: null }, error: null }),
+        },
+      },
+    }));
+
+    let circlesApi: any;
+    jest.isolateModules(() => {
+      circlesApi = jest.requireActual('@/lib/api').circlesApi;
+    });
+
+    const fetchMock = jest.spyOn(global, 'fetch' as any).mockResolvedValueOnce({
+      ok: true,
+      json: async () => [],
+    } as any);
+
+    await circlesApi.searchUsers('test user');
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining('query=test%20user'),
+      expect.any(Object),
+    );
+    fetchMock.mockRestore();
+  });
 });
