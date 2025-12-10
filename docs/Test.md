@@ -12,7 +12,7 @@ cd frontend
 npm run test
 ```
 
-## ✅ Run Individual Test Files
+## Run Individual Test Files
 
 ### **api.test.ts**
 ```bash
