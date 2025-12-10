@@ -1,8 +1,6 @@
 import Constants from 'expo-constants';
 import { supabase } from './supabase';
 
-import { supabase } from './supabase';
-
 // Get API URL from environment or use default
 const getApiUrl = () => {
   return (
