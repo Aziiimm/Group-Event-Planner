@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
@@ -8,6 +8,7 @@ import { Alert, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/hooks/use-auth';
+import { circlesApi, eventsApi } from '@/lib/api';
 import { supabase } from '@/lib/supabase';
 
 interface UserProfile {
@@ -30,6 +31,68 @@ export default function ProfileScreen() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [statistics, setStatistics] = useState<Statistics>({ circles: 0, events: 0, photos: 0 });
   const [loading, setLoading] = useState(true);
+
+  const fetchStatistics = useCallback(async () => {
+    if (!user?.id) return;
+
+    try {
+      // Fetch circles count
+      const circles = await circlesApi.getUserCircles();
+      const circlesCount = circles?.length || 0;
+
+      // Fetch events count - get all upcoming events from all user's circles
+      let eventsCount = 0;
+      if (circlesCount > 0) {
+        const eventsPromises = circles.map(
+          (circle: { id: string }) => eventsApi.getCircleEvents(circle.id).catch(() => []), // Don't fail if one circle's events fail
+        );
+        const eventsArrays = await Promise.all(eventsPromises);
+        const allEvents = eventsArrays.flat();
+        
+        // Deduplicate events by ID (in case of any edge cases)
+        const uniqueEvents = Array.from(
+          new Map(allEvents.map((event: { id: string }) => [event.id, event])).values()
+        );
+        
+        // Filter to only count upcoming events (exclude completed)
+        const upcomingEvents = uniqueEvents.filter(
+          (event: { status: string }) => event.status === 'upcoming'
+        );
+        
+        eventsCount = upcomingEvents?.length || 0;
+      }
+
+      // Fetch photos count - query photos table (may not exist yet)
+      let photosCount = 0;
+      try {
+        // Get all circle IDs the user is a member of
+        const circleIds = (circles || []).map((circle: { id: string }) => circle.id);
+
+        if (circleIds.length > 0) {
+          const { count, error } = await supabase
+            .from('photos')
+            .select('*', { count: 'exact', head: true })
+            .in('circle_id', circleIds);
+
+          if (!error && count !== null) {
+            photosCount = count;
+          }
+        }
+      } catch (photoError) {
+        // Photos table may not exist yet, so count will be 0
+        console.log('Photos table not available yet:', photoError);
+      }
+
+      setStatistics({
+        circles: circlesCount,
+        events: eventsCount,
+        photos: photosCount,
+      });
+    } catch (err) {
+      console.error('Error fetching statistics:', err);
+      // Keep default values (0, 0, 0) on error
+    }
+  }, [user?.id]);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -56,9 +119,8 @@ export default function ProfileScreen() {
           setProfile(data);
         }
 
-        // TODO: Fetch actual statistics from database
-        // For now, using placeholder data
-        setStatistics({ circles: 0, events: 0, photos: 0 });
+        // Fetch statistics from database
+        await fetchStatistics();
       } catch (err) {
         console.error('Error in fetchProfile:', err);
       } finally {
@@ -67,7 +129,7 @@ export default function ProfileScreen() {
     };
 
     fetchProfile();
-  }, [user]);
+  }, [user, fetchStatistics]);
 
   const handleSignOut = () => {
     Alert.alert('Sign Out', 'Are you sure you want to sign out?', [

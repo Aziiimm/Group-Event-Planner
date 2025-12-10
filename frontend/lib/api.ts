@@ -1,6 +1,8 @@
 import Constants from 'expo-constants';
 import { supabase } from './supabase';
 
+import { supabase } from './supabase';
+
 // Get API URL from environment or use default
 const getApiUrl = () => {
   return (
@@ -194,7 +196,8 @@ export const eventsApi = {
     circleId: string,
     eventData: {
       title: string;
-      date_time: string;
+      start_time: string;
+      end_time: string;
       location: string;
       description?: string;
     },
@@ -230,6 +233,142 @@ export const eventsApi = {
   // Get all RSVPs for an event
   getEventRSVPs: async (eventId: string) => {
     const response = await apiRequest(`/events/${eventId}/rsvps`);
+    return response.json();
+  },
+};
+
+// Expenses API
+export const expensesApi = {
+  // Create an expense for an event
+  createExpense: async (
+    eventId: string,
+    expenseData: {
+      title: string;
+      amount: number;
+      paid_by: string;
+      split_type: 'equal' | 'individual' | 'custom';
+      attendee_ids: string[];
+      custom_splits?: { user_id: string; amount_owed: number }[];
+      description?: string;
+    },
+  ) => {
+    const response = await apiRequest(`/expenses/event/${eventId}`, {
+      method: 'POST',
+      body: JSON.stringify(expenseData),
+    });
+    return response.json();
+  },
+
+  // Get all expenses for an event
+  getEventExpenses: async (eventId: string) => {
+    const response = await apiRequest(`/expenses/event/${eventId}`);
+    return response.json();
+  },
+
+  // Get expense summary for an event
+  getExpenseSummary: async (eventId: string) => {
+    const response = await apiRequest(`/expenses/event/${eventId}/summary`);
+    return response.json();
+  },
+
+  // Get single expense details
+  getExpense: async (expenseId: string) => {
+    const response = await apiRequest(`/expenses/${expenseId}`);
+    return response.json();
+  },
+
+  // Update an expense
+  updateExpense: async (
+    expenseId: string,
+    updateData: {
+      title?: string;
+      amount?: number;
+      paid_by?: string;
+      split_type?: 'equal' | 'individual' | 'custom';
+      attendee_ids?: string[];
+      custom_splits?: { user_id: string; amount_owed: number }[];
+      description?: string;
+    },
+  ) => {
+    const response = await apiRequest(`/expenses/${expenseId}`, {
+      method: 'PUT',
+      body: JSON.stringify(updateData),
+    });
+    return response.json();
+  },
+
+  // Delete an expense
+  deleteExpense: async (expenseId: string) => {
+    const response = await apiRequest(`/expenses/${expenseId}`, {
+      method: 'DELETE',
+    });
+    return response.json();
+  },
+};
+
+// Availability API
+export const availabilityApi = {
+  // Set availability for a date range and hour blocks
+  setAvailability: async (
+    circleId: string,
+    availabilityData: {
+      start_date: string;
+      end_date: string;
+      hour_blocks: number[];
+      is_available?: boolean;
+    },
+  ) => {
+    const response = await apiRequest(`/availability/circle/${circleId}`, {
+      method: 'POST',
+      body: JSON.stringify(availabilityData),
+    });
+    return response.json();
+  },
+
+  // Get all members' availability for a circle
+  getCircleAvailability: async (
+    circleId: string,
+    startDate?: string,
+    endDate?: string,
+  ) => {
+    const params = new URLSearchParams();
+    if (startDate) params.append('start_date', startDate);
+    if (endDate) params.append('end_date', endDate);
+    const queryString = params.toString();
+    const url = `/availability/circle/${circleId}${queryString ? `?${queryString}` : ''}`;
+    const response = await apiRequest(url);
+    return response.json();
+  },
+
+  // Get availability heatmap for a circle
+  getAvailabilityHeatmap: async (
+    circleId: string,
+    startDate?: string,
+    endDate?: string,
+  ) => {
+    const params = new URLSearchParams();
+    if (startDate) params.append('start_date', startDate);
+    if (endDate) params.append('end_date', endDate);
+    const queryString = params.toString();
+    const url = `/availability/circle/${circleId}/heatmap${queryString ? `?${queryString}` : ''}`;
+    const response = await apiRequest(url);
+    return response.json();
+  },
+
+  // Update a single availability block
+  updateAvailabilityBlock: async (availabilityId: string, isAvailable: boolean) => {
+    const response = await apiRequest(`/availability/${availabilityId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ is_available: isAvailable }),
+    });
+    return response.json();
+  },
+
+  // Delete a single availability block
+  deleteAvailabilityBlock: async (availabilityId: string) => {
+    const response = await apiRequest(`/availability/${availabilityId}`, {
+      method: 'DELETE',
+    });
     return response.json();
   },
 };
