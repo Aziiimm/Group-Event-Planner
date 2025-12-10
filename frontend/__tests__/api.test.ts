@@ -64,4 +64,35 @@ describe('apiRequest / circlesApi', () => {
 
     fetchMock.mockRestore();
   });
+
+  it('getCircle calls correct endpoint with circleId', async () => {
+    jest.doMock('@/lib/supabase', () => ({
+      supabase: {
+        auth: {
+          getSession: jest
+            .fn()
+            .mockResolvedValue({ data: { session: { access_token: 'tok-123', expires_at: Math.floor(Date.now() / 1000) + 3600 } }, error: null }),
+          refreshSession: jest.fn().mockResolvedValue({ data: { session: null }, error: null }),
+        },
+      },
+    }));
+
+    let circlesApi: any;
+    jest.isolateModules(() => {
+      circlesApi = jest.requireActual('@/lib/api').circlesApi;
+    });
+
+    const fetchMock = jest.spyOn(global, 'fetch' as any).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ id: 'circle-123', name: 'Test Circle' }),
+    } as any);
+
+    await circlesApi.getCircle('circle-123');
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining('/api/circles/circle-123'),
+      expect.any(Object),
+    );
+    fetchMock.mockRestore();
+  });
 });
