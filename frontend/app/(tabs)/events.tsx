@@ -25,7 +25,8 @@ interface Circle {
 interface Event {
   id: string;
   title: string;
-  date_time: string;
+  start_time: string;
+  end_time: string;
   location: string;
   status: 'upcoming' | 'completed';
   circle_id: string;
@@ -81,7 +82,7 @@ export default function EventsScreen() {
       // Filter to only upcoming events and sort by date
       const upcomingEvents = allEvents
         .filter((event) => event.status === 'upcoming')
-        .sort((a, b) => new Date(a.date_time).getTime() - new Date(b.date_time).getTime());
+        .sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime());
 
       setEvents(upcomingEvents);
     } catch (error) {
@@ -98,29 +99,36 @@ export default function EventsScreen() {
     fetchEvents();
   };
 
-  const formatDateTime = (dateTimeString: string) => {
+  const formatDateTime = (startTimeString: string, endTimeString?: string) => {
     try {
-      const date = new Date(dateTimeString);
+      const startDate = new Date(startTimeString);
       const now = new Date();
-      const diffDays = Math.floor((date.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+      const diffDays = Math.floor((startDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+
+      const startTimeStr = startDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+      let timeRange = startTimeStr;
+      
+      if (endTimeString) {
+        const endDate = new Date(endTimeString);
+        const endTimeStr = endDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+        timeRange = `${startTimeStr} - ${endTimeStr}`;
+      }
 
       // If within 7 days, show relative date
       if (diffDays === 0) {
-        return `Today at ${date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`;
+        return `Today at ${timeRange}`;
       } else if (diffDays === 1) {
-        return `Tomorrow at ${date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`;
+        return `Tomorrow at ${timeRange}`;
       } else if (diffDays > 1 && diffDays <= 7) {
-        return `${date.toLocaleDateString('en-US', { weekday: 'long', hour: 'numeric', minute: '2-digit' })}`;
+        return `${startDate.toLocaleDateString('en-US', { weekday: 'long' })} at ${timeRange}`;
       } else {
-        return date.toLocaleDateString('en-US', {
+        return `${startDate.toLocaleDateString('en-US', {
           month: 'short',
           day: 'numeric',
-          hour: 'numeric',
-          minute: '2-digit',
-        });
+        })} at ${timeRange}`;
       }
     } catch {
-      return dateTimeString;
+      return startTimeString;
     }
   };
 
@@ -188,7 +196,7 @@ export default function EventsScreen() {
                   <View className="ml-3 flex-1">
                     <Text className="text-sm font-semibold text-gray-500">Date & Time</Text>
                     <Text className="mt-0.5 text-base text-gray-900">
-                      {formatDateTime(event.date_time)}
+                      {formatDateTime(event.start_time, event.end_time)}
                     </Text>
                   </View>
                 </View>

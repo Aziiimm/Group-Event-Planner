@@ -17,6 +17,7 @@ import {
 import { Calendar } from 'react-native-calendars';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import AvailabilityHeatmap from '@/components/availability/availability-heatmap';
 import { eventsApi } from '@/lib/api';
 
 export default function CreateEventScreen() {
@@ -33,6 +34,9 @@ export default function CreateEventScreen() {
   const [location, setLocation] = useState('');
   const [description, setDescription] = useState('');
   const [loading, setLoading] = useState(false);
+  const [heatmapSelectedDate, setHeatmapSelectedDate] = useState<string>('');
+  const [heatmapStartHour, setHeatmapStartHour] = useState<number | undefined>(undefined);
+  const [heatmapEndHour, setHeatmapEndHour] = useState<number | undefined>(undefined);
 
   const formatDateTime = (date: Date): string => {
     const year = date.getFullYear();
@@ -54,6 +58,13 @@ export default function CreateEventScreen() {
       hour12: true,
     };
     return date.toLocaleString('en-US', options);
+  };
+
+  const formatHour = (hour: number): string => {
+    if (hour === 0) return '12 AM';
+    if (hour < 12) return `${hour} AM`;
+    if (hour === 12) return '12 PM';
+    return `${hour - 12} PM`;
   };
 
   const handleDatePickerPress = () => {
@@ -152,11 +163,6 @@ export default function CreateEventScreen() {
       return;
     }
 
-    if (!dateTime.trim()) {
-      Alert.alert('Error', 'Please select a date and time');
-      return;
-    }
-
     if (!location.trim()) {
       Alert.alert('Error', 'Please enter a location');
       return;
@@ -167,11 +173,40 @@ export default function CreateEventScreen() {
       return;
     }
 
+    // Determine start_time and end_time
+    let startTime: string;
+    let endTime: string;
+
+    // Prefer heatmap selection if available
+    if (heatmapSelectedDate && heatmapStartHour !== undefined && heatmapEndHour !== undefined) {
+      const [year, month, day] = heatmapSelectedDate.split('-').map(Number);
+      // Create dates in local timezone, then convert to UTC ISO string
+      const startDate = new Date(year, month - 1, day, heatmapStartHour, 0, 0, 0);
+      const endDate = new Date(year, month - 1, day, heatmapEndHour, 0, 0, 0);
+      
+      // Use toISOString() to properly convert local time to UTC
+      startTime = startDate.toISOString();
+      endTime = endDate.toISOString();
+    } else if (dateTime.trim()) {
+      // Fall back to dateTime picker
+      const startDate = new Date(dateTime);
+      const endDate = new Date(startDate);
+      endDate.setHours(endDate.getHours() + 1); // Default to 1 hour duration
+      
+      // Use toISOString() to properly convert to UTC
+      startTime = startDate.toISOString();
+      endTime = endDate.toISOString();
+    } else {
+      Alert.alert('Error', 'Please select a date and time');
+      return;
+    }
+
     setLoading(true);
     try {
       const event = await eventsApi.createEvent(circleId, {
         title: title.trim(),
-        date_time: dateTime,
+        start_time: startTime,
+        end_time: endTime,
         location: location.trim(),
         description: description.trim() || undefined,
       });
@@ -194,7 +229,10 @@ export default function CreateEventScreen() {
           >
             <MaterialIcons name="arrow-back" size={24} color="#FFFFFF" />
           </TouchableOpacity>
-          <Text className="flex-1 text-2xl font-bold text-white">Create Event</Text>
+          <View className="flex-1">
+            <Text className="text-2xl font-bold text-white">Create Event</Text>
+            <Text className="mt-1 text-sm text-white/90">Plan a new event for your circle</Text>
+          </View>
         </View>
       </View>
 
@@ -344,6 +382,80 @@ export default function CreateEventScreen() {
               display="default"
               onChange={handleTimeChange}
             />
+          )}
+
+          {/* Availability Heatmap */}
+          {circleId && (
+            <View className="mb-6">
+              <Text className="mb-3 text-base font-semibold text-gray-700">
+                Circle Availability
+              </Text>
+              <AvailabilityHeatmap
+                circleId={circleId}
+                selectedDate={heatmapSelectedDate}
+                selectedStartHour={heatmapStartHour}
+                selectedEndHour={heatmapEndHour}
+                onDatePress={(date) => {
+                  setHeatmapSelectedDate(date);
+                  // When user taps a date in heatmap, pre-fill the date picker
+                  const [year, month, day] = date.split('-').map(Number);
+                  const newDate = new Date(year, month - 1, day);
+                  // Use selected time if available, otherwise default to noon
+                  if (heatmapStartHour !== undefined) {
+                    newDate.setHours(heatmapStartHour, 0, 0, 0);
+                  } else {
+                    newDate.setHours(12, 0, 0, 0);
+                  }
+                  setSelectedDate(newDate);
+                  setDateTime(formatDateTime(newDate));
+                  setSelectedCalendarDate(date);
+                }}
+                onTimeSelect={(date, startHour, endHour) => {
+                  setHeatmapSelectedDate(date);
+                  setHeatmapStartHour(startHour);
+                  setHeatmapEndHour(endHour);
+                  
+                  // Update the selected date and time
+                  const [year, month, day] = date.split('-').map(Number);
+                  const newDate = new Date(year, month - 1, day);
+                  newDate.setHours(startHour, 0, 0, 0);
+                  setSelectedDate(newDate);
+                  setDateTime(formatDateTime(newDate));
+                  setSelectedCalendarDate(date);
+                }}
+                onTimeClear={() => {
+                  setHeatmapStartHour(undefined);
+                  setHeatmapEndHour(undefined);
+                  // Reset to default time if date is still selected
+                  if (heatmapSelectedDate) {
+                    const [year, month, day] = heatmapSelectedDate.split('-').map(Number);
+                    const newDate = new Date(year, month - 1, day);
+                    newDate.setHours(12, 0, 0, 0);
+                    setSelectedDate(newDate);
+                    setDateTime(formatDateTime(newDate));
+                  }
+                }}
+                showHourDetails={true}
+              />
+              <Text className="mt-2 text-xs text-gray-500">
+                Tap a date to see availability, then tap hours to select your event time
+              </Text>
+              {heatmapStartHour !== undefined && heatmapEndHour !== undefined && heatmapSelectedDate && (
+                <View className="mt-2 rounded-lg border border-blue-200 bg-blue-50 p-3">
+                  <View className="flex-row items-center">
+                    <MaterialIcons name="event" size={16} color="#3B82F6" />
+                    <Text className="ml-2 text-xs font-medium text-blue-900">
+                      Event time selected:{' '}
+                      {new Date(heatmapSelectedDate).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                      })}{' '}
+                      {formatHour(heatmapStartHour)} - {formatHour(heatmapEndHour)}
+                    </Text>
+                  </View>
+                </View>
+              )}
+            </View>
           )}
 
           {/* Location */}

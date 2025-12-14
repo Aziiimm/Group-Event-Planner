@@ -40,29 +40,42 @@ export default function ProfileScreen() {
       const circles = await circlesApi.getUserCircles();
       const circlesCount = circles?.length || 0;
 
-      // Fetch events count - get all events from all user's circles
+
+      // Fetch events count - get all upcoming events from all user's circles
       let eventsCount = 0;
       if (circlesCount > 0) {
-        const eventsPromises = circles.map((circle: { id: string }) =>
-          eventsApi.getCircleEvents(circle.id).catch(() => []), // Don't fail if one circle's events fail
+        const eventsPromises = circles.map(
+          (circle: { id: string }) => eventsApi.getCircleEvents(circle.id).catch(() => []), // Don't fail if one circle's events fail
         );
         const eventsArrays = await Promise.all(eventsPromises);
         const allEvents = eventsArrays.flat();
-        eventsCount = allEvents?.length || 0;
+        
+        // Deduplicate events by ID (in case of any edge cases)
+        const uniqueEvents = Array.from(
+          new Map(allEvents.map((event: { id: string }) => [event.id, event])).values()
+        );
+        
+        // Filter to only count upcoming events (exclude completed)
+        const upcomingEvents = uniqueEvents.filter(
+          (event: { status: string }) => event.status === 'upcoming'
+        );
+        
+        eventsCount = upcomingEvents?.length || 0;
       }
 
       // Fetch photos count - query photos table (may not exist yet)
       let photosCount = 0;
       try {
         // Get all circle IDs the user is a member of
-        const circleIds = circles.map((circle: { id: string }) => circle.id);
-        
+
+        const circleIds = (circles || []).map((circle: { id: string }) => circle.id);
+
         if (circleIds.length > 0) {
           const { count, error } = await supabase
             .from('photos')
             .select('*', { count: 'exact', head: true })
             .in('circle_id', circleIds);
-          
+
           if (!error && count !== null) {
             photosCount = count;
           }
