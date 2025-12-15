@@ -8,7 +8,9 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   ScrollView,
   Text,
   TextInput,
@@ -395,17 +397,17 @@ export default function CircleDetailScreen() {
         {/* Action Buttons (for all members) */}
         {circle?.userRole && !circle?.hasPendingInvitation && (
           <View className={`px-6 ${canInvite ? 'pt-4' : 'pt-6'}`}>
-            <View className="flex-row space-x-3">
+            <View className="flex-row">
               <TouchableOpacity
                 onPress={() => router.push(`/events/create?circleId=${circle.id}` as any)}
-                className="flex-1 flex-row items-center justify-center rounded-xl bg-blue-600 py-3 shadow-sm"
+                className="mr-1.5 flex-1 flex-row items-center justify-center rounded-xl bg-blue-600 py-3 shadow-sm"
               >
                 <MaterialIcons name="event" size={20} color="#FFFFFF" />
                 <Text className="ml-2 text-base font-semibold text-white">Create Event</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={() => router.push(`/availability/${circle.id}` as any)}
-                className="flex-1 flex-row items-center justify-center rounded-xl bg-green-600 py-3 shadow-sm"
+                className="ml-1.5 flex-1 flex-row items-center justify-center rounded-xl bg-green-600 py-3 shadow-sm"
               >
                 <MaterialIcons name="schedule" size={20} color="#FFFFFF" />
                 <Text className="ml-2 text-base font-semibold text-white">Availability</Text>
@@ -592,11 +594,16 @@ export default function CircleDetailScreen() {
         transparent={true}
         onRequestClose={() => setInviteModalVisible(false)}
       >
-        <View className="flex-1 items-center justify-end bg-black/50">
-          <View
-            className="w-full rounded-t-3xl bg-white p-6"
-            style={{ paddingBottom: insets.bottom + 24 }}
-          >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          className="flex-1"
+          keyboardVerticalOffset={0}
+        >
+          <View className="flex-1 items-center justify-end bg-black/50">
+            <View
+              className="w-full rounded-t-3xl bg-white p-6"
+              style={{ paddingBottom: insets.bottom + 24 }}
+            >
             <View className="mb-4 flex-row items-center justify-between">
               <Text className="text-2xl font-bold text-gray-900">Invite Members</Text>
               <TouchableOpacity onPress={() => setInviteModalVisible(false)}>
@@ -631,6 +638,7 @@ export default function CircleDetailScreen() {
               <FlatList
                 data={searchResults}
                 keyExtractor={(item) => item.id}
+                keyboardShouldPersistTaps="handled"
                 renderItem={({ item }) => (
                   <TouchableOpacity
                     onPress={() => handleInviteUser(item.id, item.display_name)}
@@ -674,8 +682,9 @@ export default function CircleDetailScreen() {
                 </Text>
               </View>
             )}
+            </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   );
