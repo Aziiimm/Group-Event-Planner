@@ -18,6 +18,7 @@ jest.mock('expo-router', () => ({
     back: jest.fn(),
   }),
   useFocusEffect: jest.fn(),
+  useLocalSearchParams: jest.fn().mockReturnValue({}),
 }));
 
 jest.mock('react-native-safe-area-context', () => {
@@ -69,12 +70,32 @@ jest.mock('@/lib/supabase', () => {
   };
 });
 
-jest.mock('@/lib/api', () => ({
-  circlesApi: {
-    getUserCircles: jest.fn().mockResolvedValue([]),
-    getPendingInvitations: jest.fn().mockResolvedValue([]),
-    respondToInvitation: jest.fn().mockResolvedValue({}),
-  },
-}));
+jest.mock('@/lib/api', () => {
+  const originalModule = jest.requireActual('@/lib/api');
+  return {
+    ...originalModule,
+    circlesApi: {
+      getUserCircles: jest.fn().mockResolvedValue([]),
+      getPendingInvitations: jest.fn().mockResolvedValue([]),
+      respondToInvitation: jest.fn().mockResolvedValue({}),
+    },
+    // Default no-op mocks for events/expenses; individual tests can override
+    eventsApi: {
+      createEvent: jest.fn(),
+      getCircleEvents: jest.fn(),
+      getEvent: jest.fn(),
+      rsvpToEvent: jest.fn(),
+      getEventRSVPs: jest.fn(),
+    },
+    expensesApi: {
+      createExpense: jest.fn(),
+      getEventExpenses: jest.fn(),
+      getExpenseSummary: jest.fn(),
+      getExpense: jest.fn(),
+      updateExpense: jest.fn(),
+      deleteExpense: jest.fn(),
+    },
+  };
+});
 
 jest.mock('react-native-reanimated', () => require('react-native-reanimated/mock'));
