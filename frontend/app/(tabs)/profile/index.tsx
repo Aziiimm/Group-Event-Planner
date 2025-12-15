@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { Alert, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, RefreshControl, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/hooks/use-auth';
@@ -24,6 +24,11 @@ interface Statistics {
   photos: number;
 }
 
+interface Event {
+  id: string;
+  status: 'upcoming' | 'completed';
+}
+
 export default function ProfileScreen() {
   const { user, signOut } = useAuth();
   const router = useRouter();
@@ -31,6 +36,7 @@ export default function ProfileScreen() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [statistics, setStatistics] = useState<Statistics>({ circles: 0, events: 0, photos: 0 });
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   const fetchStatistics = useCallback(async () => {
     if (!user?.id) return;
@@ -39,6 +45,7 @@ export default function ProfileScreen() {
       // Fetch circles count
       const circles = await circlesApi.getUserCircles();
       const circlesCount = circles?.length || 0;
+
 
       // Fetch events count - get all upcoming events from all user's circles
       let eventsCount = 0;
@@ -51,12 +58,12 @@ export default function ProfileScreen() {
         
         // Deduplicate events by ID (in case of any edge cases)
         const uniqueEvents = Array.from(
-          new Map(allEvents.map((event: { id: string }) => [event.id, event])).values()
+          new Map(allEvents.map((event: Event) => [event.id, event])).values()
         );
         
         // Filter to only count upcoming events (exclude completed)
         const upcomingEvents = uniqueEvents.filter(
-          (event: { status: string }) => event.status === 'upcoming'
+          (event) => event.status === 'upcoming'
         );
         
         eventsCount = upcomingEvents?.length || 0;
@@ -66,6 +73,7 @@ export default function ProfileScreen() {
       let photosCount = 0;
       try {
         // Get all circle IDs the user is a member of
+
         const circleIds = (circles || []).map((circle: { id: string }) => circle.id);
 
         if (circleIds.length > 0) {
@@ -94,42 +102,57 @@ export default function ProfileScreen() {
     }
   }, [user?.id]);
 
-  useEffect(() => {
-    const fetchProfile = async () => {
-      if (!user?.id) return;
+  const fetchData = useCallback(async () => {
+    if (!user?.id) return;
 
-      try {
-        // Fetch user profile from database
-        const { data, error } = await supabase
-          .from('users')
-          .select('first_name, last_name, display_name, email')
-          .eq('id', user.id)
-          .single();
+    try {
+      // Fetch user profile from database
+      const { data, error } = await supabase
+        .from('users')
+        .select('first_name, last_name, display_name, email')
+        .eq('id', user.id)
+        .single();
 
-        if (error) {
-          console.error('Error fetching profile:', error);
-          // Fallback to auth user metadata
-          setProfile({
-            first_name: user.user_metadata?.first_name || null,
-            last_name: user.user_metadata?.last_name || null,
-            display_name: user.user_metadata?.display_name || null,
-            email: user.email || null,
-          });
-        } else {
-          setProfile(data);
-        }
-
-        // Fetch statistics from database
-        await fetchStatistics();
-      } catch (err) {
-        console.error('Error in fetchProfile:', err);
-      } finally {
-        setLoading(false);
+      if (error) {
+        console.error('Error fetching profile:', error);
+        // Fallback to auth user metadata
+        setProfile({
+          first_name: user.user_metadata?.first_name || null,
+          last_name: user.user_metadata?.last_name || null,
+          display_name: user.user_metadata?.display_name || null,
+          email: user.email || null,
+        });
+      } else {
+        setProfile(data);
       }
-    };
 
-    fetchProfile();
+      // Fetch statistics from database
+      await fetchStatistics();
+    } catch (err) {
+      console.error('Error in fetchData:', err);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
   }, [user, fetchStatistics]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  // Refresh data when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      if (user?.id) {
+        fetchData();
+      }
+    }, [user?.id, fetchData]),
+  );
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchData();
+  };
 
   const handleSignOut = () => {
     Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
@@ -180,7 +203,18 @@ export default function ProfileScreen() {
 
   return (
     <View className="flex-1 bg-white">
-      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+      <ScrollView
+        className="flex-1"
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor="#3B82F6"
+            colors={['#3B82F6', '#A855F7']}
+          />
+        }
+      >
         {/* Blue-Purple Gradient Header */}
         <LinearGradient
           colors={['#3B82F6', '#A855F7']}
