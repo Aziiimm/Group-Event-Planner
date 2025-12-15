@@ -344,11 +344,11 @@ export default function EventDetailScreen() {
           <Text className="mb-4 text-xl font-bold text-gray-900">RSVP</Text>
 
           {/* RSVP Buttons */}
-          <View className="mb-6 flex-row space-x-3">
+          <View className="mb-6 flex-row">
             <TouchableOpacity
               onPress={() => handleRSVP('going')}
               disabled={rsvpLoading || userRsvp === 'going'}
-              className={`flex-1 flex-row items-center justify-center rounded-xl py-3 ${
+              className={`mr-1.5 flex-1 flex-row items-center justify-center rounded-xl py-3 ${
                 userRsvp === 'going' ? 'bg-green-600' : 'bg-green-100'
               }`}
               style={{ opacity: rsvpLoading || userRsvp === 'going' ? 1 : 0.8 }}
@@ -374,7 +374,7 @@ export default function EventDetailScreen() {
             <TouchableOpacity
               onPress={() => handleRSVP('not_going')}
               disabled={rsvpLoading || userRsvp === 'not_going'}
-              className={`flex-1 flex-row items-center justify-center rounded-xl py-3 ${
+              className={`ml-1.5 flex-1 flex-row items-center justify-center rounded-xl py-3 ${
                 userRsvp === 'not_going' ? 'bg-red-600' : 'bg-red-100'
               }`}
               style={{ opacity: rsvpLoading || userRsvp === 'not_going' ? 1 : 0.8 }}
