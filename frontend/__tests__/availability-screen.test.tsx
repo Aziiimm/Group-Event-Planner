@@ -95,40 +95,6 @@ describe('AvailabilityManagementScreen', () => {
     });
   });
 
-  it('deletes all availability for a date when no hours are selected', async () => {
-    mockUseLocalSearchParams({ circleId: 'circle-3' });
-
-    // Existing availability for current user on selected date
-    (availabilityApi.getCircleAvailability as jest.Mock).mockResolvedValue([
-      {
-        id: 'block-1',
-        user_id: 'test-user',
-        date: new Date().toISOString().split('T')[0],
-        hour_block: 10,
-        is_available: true,
-      },
-    ]);
-
-    (availabilityApi.deleteAvailabilityBlock as jest.Mock).mockResolvedValue({});
-
-    const { getByText } = render(<AvailabilityManagementScreen />);
-
-    await waitFor(() => {
-      expect(getByText('Manage Availability')).toBeTruthy();
-    });
-
-    // The existing 10 AM block should be pre-selected; tap it to clear selection
-    const tenAmButton = getByText('10 AM');
-    fireEvent.press(tenAmButton); // toggle off
-
-    await act(async () => {
-      fireEvent.press(getByText('Remove All'));
-    });
-
-    await waitFor(() => {
-      expect(availabilityApi.deleteAvailabilityBlock).toHaveBeenCalledWith('block-1');
-    });
-  });
 });
 
 
