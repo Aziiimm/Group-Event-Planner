@@ -34,12 +34,10 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
         run: |
-          cat <<EOF > .env.local
-SUPABASE_URL=${SUPABASE_URL}
-SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
-SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
-PORT=3000
-EOF
+          echo "SUPABASE_URL=${SUPABASE_URL}" > .env.local
+          echo "SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}" >> .env.local
+          echo "SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}" >> .env.local
+          echo "PORT=3000" >> .env.local
           npm run test:e2e
 
   frontend-tests:
